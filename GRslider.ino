@@ -62,6 +62,7 @@ void ShowCommands()
   Serial.println(" 1,<set speed>;     - Set speed. 100-25600");
   Serial.print  (" 2,<set accelaration>; - Set acceleration 100-25600 "); 
   Serial.println(" 3;                  - go stepper");
+  showVals();
 }
 
 void OnSetaccel(){
@@ -77,9 +78,9 @@ void OnGo(){
 }
 
 void showVals(){
-  Serial.print("speed: ");
+  Serial.print("current speed: ");
   Serial.println(stepper2_Speed);
-  Serial.print("accel: ");
+  Serial.print("current accel: ");
   Serial.println(stepper2_accl); 
 }
 
