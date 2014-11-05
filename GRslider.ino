@@ -2,15 +2,9 @@
 // classes
 
 #include <AccelStepper.h>
+#include <CmdMessenger.h>  // CmdMessenger
 
-
-#define DEBUG false
-
-// http://arduino.cc/en/Tutorial/SerialEvent
-String inputString = "";         // a string to hold incoming data
-boolean stringComplete = false;  // whether the string is complete
-boolean stepper2go=false;
-
+#define DEBUG true
 
 //GLOBAL STEPPER PROPERTIES
 #define homePosition 1000
@@ -18,7 +12,7 @@ int stepper_speed = 3200; //up to 6400, 25600;
 
 #define buttonPin 22
 
-int stepper2_Speed = 500;
+int stepper2_Speed = 5000;
 int stepper2_accl = 500;
 
 #define step2DIR 21
@@ -26,69 +20,109 @@ int stepper2_accl = 500;
 #define limitPin2a 23
 AccelStepper stepper2(1, step2STEP, step2DIR); //step / dir
 
-int scalePos[] = {
+#define arrLen 5
+int scalePos[arrLen] = {
   10, 63, 125, 180, 240};
+
+// Attach a new CmdMessenger object to the default Serial port
+CmdMessenger cmdMessenger = CmdMessenger(Serial);
+// This is the list of recognized commands.  
+// In order to receive, attach a callback function to these events
+enum
+{
+  kCommandList         , // Command to request list of available commands
+  kSetSpeed              , // Command to set speed
+  kSetAccel   , // Command to set acceleartion
+  kGo           , // Command to move stepper
+};
+// Callbacks define on which received commands we take action
+void attachCommandCallbacks()
+{
+  // Attach callback methods
+  cmdMessenger.attach(OnUnknownCommand);
+  cmdMessenger.attach(kCommandList, OnCommandList);
+  cmdMessenger.attach(kSetSpeed, OnSetSpeed);
+  cmdMessenger.attach(kSetAccel, OnSetaccel);
+  cmdMessenger.attach(kGo, OnGo);
+}
+// Called when a received command has no attached function
+void OnUnknownCommand()
+{
+  Serial.println("This command is unknown!");
+  ShowCommands();
+}
+
+// Callback function that shows a list of commands
+void OnCommandList()
+{
+  ShowCommands();
+}
+
+// Show available commands
+void ShowCommands() 
+{
+  Serial.println("Available commands");
+  Serial.println(" 0;                 - This command list");
+  Serial.println(" 1,<set speed>;     - Set speed. 100-25600");
+  Serial.print  (" 2,<set accelaration>; - Set acceleration 100-25600 "); 
+  Serial.println(" 3;                  - go stepper");
+}
+
+void OnSetaccel(){
+    stepper2_accl = cmdMessenger.readInt16Arg(); 
+}
+void OnSetSpeed(){
+    stepper2_Speed = cmdMessenger.readInt16Arg(); 
+}
+void OnGo(){
+  runStepper2();
+}
+
+void runStepper2(){
+  stepper2.setMaxSpeed(stepper2_Speed);
+  stepper2.setAcceleration(stepper2_accl);
+  int dest = scalePos[random(arrLen-1)];
+  stepper2.moveTo(dest);
+  Serial.println(dest);
+}
+
 
 void setup()
 {
-  Serial.begin(115200);
-  inputString.reserve(200);
-
-  pinMode(buttonPin, INPUT_PULLUP);   
-  delay(100);
-  ///wait here to start run becuase reset sucks on teensy
-  while (digitalRead(buttonPin)) {
+  if(DEBUG){
+    Serial.begin(115200);
+    while (Serial.available() <= 0) {
+      Serial.println("waiting for terminal...");  
+      delay(300);
+    }
+    // Adds newline to every command
+    cmdMessenger.printLfCr();   
+    // Attach my application's user-defined callback methods
+    attachCommandCallbacks();
+    // Show command list
+    ShowCommands();
   }
 
 
   stepper2.setMaxSpeed(stepper2_Speed);
   pinMode(limitPin2a, INPUT_PULLUP); //arm the pullup 
 
-
-  Serial.println("begin...");
-  //run steppers until they hits the limit switch  	
-  homeStepper2();    	
+  //run steppers until they hits the limit switch   
+  homeStepper2();     
 
 }
 
 void loop()
 {
-  stepper2.runSpeedToPosition();
+    // Process incoming serial data, and perform callbacks
+  if(DEBUG) cmdMessenger.feedinSerialData();
+
+  stepper2.run();
+
 }
 
 /////////// SERIAL CONTROL //////
 
-
-void serialEvent() {
-  while (Serial.available()) {
-    char inChar = (char)Serial.read(); 
-    inputString += inChar;
-    if (inChar == '|') {
-      Serial.println(stepper2.currentPosition());
-      //do something here
-      //stepper2.setMaxSpeed(stepper2_Speed);
-      //stepper2.setAcceleration(stepper2_accl);
-
-      int gonext = scalePos[random(5)]- stepper2.currentPosition();
-      //cheap trick to roll dice again if ZERO
-      if (!gonext)
-        gonext = scalePos[random(5)]- stepper2.currentPosition();
-
-      stepper2.move(gonext);	
-      //stepper2go=true;
-
-      Serial.print(gonext);
-      Serial.print(" : ");
-      Serial.println(stepper2.distanceToGo());
-
-      //reset stuff
-      inputString = "";
-    } 
-  }
-}
-// better string split
-// http://arduino.stackexchange.com/questions/1013/how-do-i-split-an-incoming-string
-//////////////////////////////////
 
 ////////// STEPPER SEQ ///////////
 
@@ -96,17 +130,27 @@ void homeStepper2()
 {
   //run stepper until it hits the limit switch
   //the while is BLOCKING so we cant use it in main loop
-  Serial.println("stathome");
+  if(DEBUG)Serial.println("stathome");
   stepper2.setSpeed(-500);
   while(digitalRead(limitPin2a))
     stepper2.runSpeed();
 
   stepper2.setCurrentPosition(0);
 
-  Serial.println("steps:");
-  Serial.println(stepper2.currentPosition());
+  if(DEBUG)Serial.println("steps:");
+  if(DEBUG)Serial.println(stepper2.currentPosition());
 }
 //////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
 
 
 
