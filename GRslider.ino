@@ -20,6 +20,7 @@ AccelStepper stepper2(1, step2STEP, step2DIR); //step / dir
 int scalePos[arrLen] = {
   10, 63, 125, 180, 240};
 
+//////////////////////////////////////////////////////////////////
 // Attach a new CmdMessenger object to the default Serial port
 CmdMessenger cmdMessenger = CmdMessenger(Serial);
 // This is the list of recognized commands.  
@@ -66,13 +67,15 @@ void ShowCommands()
 }
 
 void OnSetaccel(){
-    stepper2_accl = cmdMessenger.readInt16Arg(); 
-    showVals();
+  stepper2_accl = cmdMessenger.readInt16Arg(); 
+  showVals();
 }
+
 void OnSetSpeed(){
-    stepper2_Speed = cmdMessenger.readInt16Arg(); 
-    showVals();
+  stepper2_Speed = cmdMessenger.readInt16Arg(); 
+  showVals();
 }
+
 void OnGo(){
   runStepper2();
 }
@@ -88,7 +91,8 @@ void runStepper2(){
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setAcceleration(stepper2_accl);
   int dest = scalePos[random(arrLen-1)];
-  Serial.println(dest);
+
+  if(DEBUG) Serial.println(dest);
   stepper2.moveTo(dest);
 }
 
@@ -97,17 +101,14 @@ void setup()
 {
   if(DEBUG){
     Serial.begin(115200);
+    //we need this to let it sit and wait for a serial connection from teensy
     while (Serial.available() <= 0) {
-      //we need this to let it sit and wait for a serial connection 
-      Serial.println("waiting for terminal...");  
+      Serial.println("waiting for terminal... send me something"); 
       delay(300);
     }
-    // Adds newline to every command
-    cmdMessenger.printLfCr();   
-    // Attach my application's user-defined callback methods
-    attachCommandCallbacks();
-    // Show command list
-    ShowCommands();
+    cmdMessenger.printLfCr();   // Adds newline to every command 
+    attachCommandCallbacks();// Attach my application's user-defined callback methods
+    ShowCommands(); // Show command list
   }
 
 
@@ -121,7 +122,7 @@ void setup()
 
 void loop()
 {
-    // Process incoming serial data, and perform callbacks
+  // Process incoming serial data, and perform callbacks
   if(DEBUG) cmdMessenger.feedinSerialData();
 
   stepper2.run();
@@ -142,12 +143,13 @@ void homeStepper2()
   while(digitalRead(limitPin2a))
     stepper2.runSpeed();
 
+  if(DEBUG)Serial.println("steps:"); //how many steps did we take to reach home
   stepper2.setCurrentPosition(0);
-
-  if(DEBUG)Serial.println("steps:");
   if(DEBUG)Serial.println(stepper2.currentPosition());
 }
 //////////////////////////////////////
+
+
 
 
 
