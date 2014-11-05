@@ -7,10 +7,6 @@
 #define DEBUG true
 
 //GLOBAL STEPPER PROPERTIES
-#define homePosition 1000
-int stepper_speed = 3200; //up to 6400, 25600;
-
-#define buttonPin 22
 
 int stepper2_Speed = 5000;
 int stepper2_accl = 500;
@@ -70,20 +66,29 @@ void ShowCommands()
 
 void OnSetaccel(){
     stepper2_accl = cmdMessenger.readInt16Arg(); 
+    showVals();
 }
 void OnSetSpeed(){
     stepper2_Speed = cmdMessenger.readInt16Arg(); 
+    showVals();
 }
 void OnGo(){
   runStepper2();
+}
+
+void showVals(){
+  Serial.print("speed: ");
+  Serial.println(stepper2_Speed);
+  Serial.print("accel: ");
+  Serial.println(stepper2_accl); 
 }
 
 void runStepper2(){
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setAcceleration(stepper2_accl);
   int dest = scalePos[random(arrLen-1)];
-  stepper2.moveTo(dest);
   Serial.println(dest);
+  stepper2.moveTo(dest);
 }
 
 
@@ -92,6 +97,7 @@ void setup()
   if(DEBUG){
     Serial.begin(115200);
     while (Serial.available() <= 0) {
+      //we need this to let it sit and wait for a serial connection 
       Serial.println("waiting for terminal...");  
       delay(300);
     }
