@@ -9,10 +9,11 @@
 //GLOBAL STEPPER PROPERTIES
 
 int stepper2_Speed = 5000;
-int stepper2_accl = 500;
+int stepper2_accl = 4500;
 
 #define step2DIR 21
 #define step2STEP 20
+#define step2ENABLE 22
 #define limitPin2a 23
 AccelStepper stepper2(1, step2STEP, step2DIR); //step / dir
 
@@ -31,6 +32,8 @@ enum
   kSetSpeed              , // Command to set speed
   kSetAccel   , // Command to set acceleartion
   kGo           , // Command to move stepper
+  kHome           , // Command to home stepper
+  kSleep          , //comand to send motor to sleep
 };
 // Callbacks define on which received commands we take action
 void attachCommandCallbacks()
@@ -41,6 +44,8 @@ void attachCommandCallbacks()
   cmdMessenger.attach(kSetSpeed, OnSetSpeed);
   cmdMessenger.attach(kSetAccel, OnSetaccel);
   cmdMessenger.attach(kGo, OnGo);
+  cmdMessenger.attach(kHome, home2);
+  cmdMessenger.attach(kSleep, sleep2);
 }
 // Called when a received command has no attached function
 void OnUnknownCommand()
@@ -63,6 +68,8 @@ void ShowCommands()
   Serial.println(" 1,<set speed>;     - Set speed. 100-25600");
   Serial.print  (" 2,<set accelaration>; - Set acceleration 100-25600 "); 
   Serial.println(" 3;                  - go stepper");
+  Serial.println(" 4;                  - home stepper");
+  Serial.println(" 5;                  - sleep stepper");
   showVals();
 }
 
@@ -77,7 +84,20 @@ void OnSetSpeed(){
 }
 
 void OnGo(){
-  runStepper2();
+  stepper2.enableOutputs();
+  randStepper2();
+}
+
+void home2(){
+  stepper2.enableOutputs();
+  //run steppers until they hits the limit switch   
+  homeStepper2();  
+}
+
+
+void sleep2(){
+  stepper2.disableOutputs();
+  Serial.println("stepper 2 sleep");
 }
 
 void showVals(){
@@ -87,7 +107,7 @@ void showVals(){
   Serial.println(stepper2_accl); 
 }
 
-void runStepper2(){
+void randStepper2(){
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setAcceleration(stepper2_accl);
   int dest = scalePos[random(arrLen-1)];
@@ -100,10 +120,12 @@ void runStepper2(){
 void setup()
 {
   if(DEBUG){
+   
+
     Serial.begin(115200);
     //we need this to let it sit and wait for a serial connection from teensy
     while (Serial.available() <= 0) {
-      Serial.println("waiting for terminal... send me something"); 
+      Serial.println("waiting for terminal..."); 
       delay(300);
     }
     cmdMessenger.printLfCr();   // Adds newline to every command 
@@ -113,6 +135,8 @@ void setup()
 
 
   stepper2.setMaxSpeed(stepper2_Speed);
+  stepper2.setEnablePin(step2ENABLE);
+  stepper2.setPinsInverted(0,0,1);//dir,step,enable
   pinMode(limitPin2a, INPUT_PULLUP); //arm the pullup 
 
   //run steppers until they hits the limit switch   
