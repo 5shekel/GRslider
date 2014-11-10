@@ -1,5 +1,5 @@
 // GRslider_v2.1 arduino mega
-// classes testing stepper
+// classes
 
 #include <AccelStepper.h>
 #include <CmdMessenger.h>  // CmdMessenger
@@ -128,6 +128,7 @@ void onGo1()
   //we call this to initiate the stepper 1 action
  // stepper1.enableOutputs();
   stepperMove = 1;
+  stepper1.enableOutputs();
 }
 
 void onGo2(){
@@ -202,21 +203,19 @@ void stepper1_action(){
     {
       limit_A = 2;
       stepperMove = false;
-      stepper1.setMaxSpeed(5000);
-      stepper1.setAcceleration(10000);
-      stepper1.moveTo(stepper1_Speed);
+      stepper1.setSpeed(400);
       Serial.println("stop on limit_a");
+      stepper1.disableOutputs();
     }
     else if(!digitalRead(limitPin1b) && limit_A==2)
     {
       limit_A = 1;
       stepperMove = false;
-      stepper1.setMaxSpeed(5000);
-      stepper1.setAcceleration(10000);
-      stepper1.moveTo(-stepper1_Speed);
+      stepper1.setSpeed(-400);
       Serial.println("stop on limit_b");
+      stepper1.disableOutputs();
     }
-    stepper1.run();
+    stepper1.runSpeed();
   }
 }
 
@@ -296,12 +295,9 @@ void homeStepper1()
   if(DEBUG)Serial.println("home_01");
 
   stepper1.enableOutputs();
-  stepper1.setCurrentPosition(0);
-  stepper1.setMaxSpeed(5000);
-  stepper1.setAcceleration(10000);
-  stepper1.moveTo(4000);
+  stepper1.setSpeed(400);
   while(digitalRead(limitPin1b))
-    stepper1.run();
+    stepper1.runSpeed();
 
   if(DEBUG)Serial.println("steps:"); //how many steps did we take to reach home
   if(DEBUG)Serial.println(stepper1.currentPosition());
@@ -309,10 +305,8 @@ void homeStepper1()
   // prime stepper for the action
   // for some reason runSpeed() doesnt work, so we do use acceleration.
   limit_A = 1;
-  //stepper1.disableOutputs();
-  stepper1.setMaxSpeed(5000);
-  stepper1.setAcceleration(10000);
-  stepper1.moveTo(-4000);
+  stepper1.setSpeed(-400);
+  stepper1.disableOutputs();
 }
 
 void homeStepper2()
