@@ -2,9 +2,17 @@
 // classes
 
 #include <AccelStepper.h>
+  // CmdMessenger
 #include <CmdMessenger.h>
 #include "Streaming.h"
-  // CmdMessenger
+
+#include <IRremote.h>
+int RECV_PIN = 13;
+int prevRes;
+long previousMillisIR = 0; 
+long IRinterval = 400;
+IRrecv irrecv(RECV_PIN);
+decode_results results;
 
 #define DEBUG true
 
@@ -252,12 +260,11 @@ void setup(){
   pinMode(limitPin2a, INPUT_PULLUP); //arm the pullup for limit pin
 
   if(DEBUG){
+
+    irrecv.enableIRIn(); // Start the receiver
+
     Serial.begin(115200);
-    //we need this to let it sit and wait for a serial connection from teensy
-    while (Serial.available() <= 0) {
-      Serial.println("waiting for terminal..."); 
-      delay(300);
-    }
+
     cmdMessenger.printLfCr();   // Adds newline to every command 
     attachCommandCallbacks();// Attach my application's user-defined callback methods
     ShowCommands(); // Show command list
@@ -275,7 +282,68 @@ void setup(){
 void loop(){
   // Process incoming serial data, and perform callbacks
   if(DEBUG) cmdMessenger.feedinSerialData();
+  if(DEBUG){
+    unsigned long currentMillisIR = millis();
+    if (irrecv.decode(&results)) {
+      if(currentMillisIR - previousMillisIR > IRinterval) {
+        previousMillisIR = currentMillisIR;   
+        //do something here
+        Serial.println(results.value);
+        switch(results.value){
 
+          case 656: //mute
+            homeAll();
+            break; 
+          case 2704: //power
+            onGo1();
+            break;
+          case 2640: // input
+            onGo2();
+            break; 
+          case 1168: // vol+
+            stepper1_Speed += 50;
+            showVals();
+            break; 
+          case 3216: // vol-
+            stepper1_Speed -= 50;
+            showVals();
+            break;
+          case 144: // ch+
+            stepper2_Speed += 100;
+            showVals();
+            break; 
+          case 2192: // ch-
+            stepper2_Speed -= 100;
+            showVals();
+            break;  
+        }
+      }
+      irrecv.resume(); // Receive the next value
+    }
+  }
+/*
+sony IR codes
+1 16
+2 2064
+3 1040
+4 3088
+5 528
+6 2576
+7 1552
+8 3600
+9 272
+0 2320
+
+vol+ 1168
+vol- 3216
+
+ch+ 144
+ch- 2192
+
+power 2704
+mute 656
+input 2640
+*/
   //if mode 6, translate analog pin(A5) to motion
   knobControl();
   
@@ -325,26 +393,27 @@ void homeStepper2(){
 }
 //////////////////////////////////////
 
+// Converting from Hex to Decimal:
+
+// NOTE: This function can handle a positive hex value from 0 - 65,535 (a four digit hex string).
+//       For larger/longer values, change "unsigned int" to "long" in both places.
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+unsigned int hexToDec(String hexString) {
+  
+  unsigned int decValue = 0;
+  int nextInt;
+  
+  for (int i = 0; i < hexString.length(); i++) {
+    
+    nextInt = int(hexString.charAt(i));
+    if (nextInt >= 48 && nextInt <= 57) nextInt = map(nextInt, 48, 57, 0, 9);
+    if (nextInt >= 65 && nextInt <= 70) nextInt = map(nextInt, 65, 70, 10, 15);
+    if (nextInt >= 97 && nextInt <= 102) nextInt = map(nextInt, 97, 102, 10, 15);
+    nextInt = constrain(nextInt, 0, 15);
+    
+    decValue = (decValue * 16) + nextInt;
+  }
+  
+  return decValue;
+}
