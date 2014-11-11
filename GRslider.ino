@@ -2,7 +2,9 @@
 // classes
 
 #include <AccelStepper.h>
-#include <CmdMessenger.h>  // CmdMessenger
+#include <CmdMessenger.h>
+#include "Streaming.h"
+  // CmdMessenger
 
 #define DEBUG true
 
@@ -60,7 +62,8 @@ CmdMessenger cmdMessenger = CmdMessenger(Serial);
 enum
 {
   kCommandList         , // Command to request list of available commands
-  kSetSpeed              , // Command to set speed
+  kSetSpeed1              , // Command to set speed
+  kSetSpeed2              , // Command to set speed
   kSetAccel   , // Command to set acceleartion
   kGoStepper2           , // Command to move stepper
   kHome           , // Command to home stepper
@@ -74,8 +77,8 @@ void attachCommandCallbacks(){
   // Attach callback methods
   cmdMessenger.attach(OnUnknownCommand);
   cmdMessenger.attach(kCommandList, OnCommandList);
-  cmdMessenger.attach(kSetSpeed, OnSetSpeed1);
-  cmdMessenger.attach(kSetSpeed, OnSetSpeed2);
+  cmdMessenger.attach(kSetSpeed1, OnSetSpeed1);
+  cmdMessenger.attach(kSetSpeed2, OnSetSpeed2);
   cmdMessenger.attach(kSetAccel, OnSetaccel2);
   cmdMessenger.attach(kGoStepper2, onGo2);
   cmdMessenger.attach(kHome, homeAll);
@@ -98,8 +101,8 @@ void ShowCommands()
   Serial.println("Available commands");
   Serial.println(" 0;                 - This command list");
   Serial.println(" 1,<set speed stepper1>;     - Set speed. 50-550");
-  Serial.println(" 2,<set speed stepper2>;     - Set speed. 100-25600");
-  Serial.print  (" 3,<set accelaration>; - Set acceleration 100-25600 "); 
+  Serial.println(" 2,<set speed stepper2>;     - Set speed. 100-25,600");
+  Serial.println(" 3,<set accelaration>; - Set acceleration 100-10,000 "); 
   Serial.println(" 4;                  - go stepper 2");
   Serial.println(" 5;                  - home stepper");
   Serial.println(" 6;                  - sleep stepper");
@@ -115,11 +118,19 @@ void OnSetaccel2(){
 
 void OnSetSpeed1(){
   stepper1_Speed = cmdMessenger.readInt16Arg(); 
+  //set the speed for next movement now
+  if(limit_A==1)
+      stepper1.setSpeed(-stepper1_Speed);
+  else
+      stepper1.setSpeed(stepper1_Speed);
+
   showVals();
 }
 
 void OnSetSpeed2(){
   stepper2_Speed = cmdMessenger.readInt16Arg(); 
+    //set the speed for next movement now
+  stepper2.setSpeed(stepper2_Speed);
   showVals();
 }
 
@@ -283,13 +294,13 @@ void homeStepper1(){
   if(DEBUG)Serial.println("home_01");
 
   stepper1.enableOutputs();
-  stepper1.setSpeed(stepper1_Speed);
+  stepper1.setSpeed(400); //override stepper1 speed, it might be slow
   while(digitalRead(limitPin1b))
     stepper1.runSpeed();
 
   // prime stepper for next action
   limit_A = 1;
-  stepper1.setSpeed(-stepper1_Speed);
+  stepper1.setSpeed(-400);
   stepper1.disableOutputs();
 }
 
