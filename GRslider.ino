@@ -119,6 +119,11 @@ void ShowCommands()
   showVals();
 }
 
+void showVals(){
+  Serial<<"current speed 1: "<<stepper1_Speed<<endl;
+  Serial<<"current speed 2: "<<stepper2_Speed<<endl;
+  Serial<<"current accel 2: "<<stepper2_accl<<endl; 
+}
 void OnSetaccel2(){
   stepper2_accl = cmdMessenger.readInt16Arg(); 
   showVals();
@@ -203,11 +208,6 @@ void knobControl(){
     }
 }
 
-void showVals(){
-  Serial<<"current speed 1: "<<stepper1_Speed<<endl;
-  Serial<<"current speed 2: "<<stepper2_Speed<<endl;
-  Serial<<"current accel 2: "<<stepper2_accl<<endl; 
-}
 
 
 void stepper1_action(){
@@ -321,29 +321,7 @@ void loop(){
       irrecv.resume(); // Receive the next value
     }
   }
-/*
-sony IR codes
-1 16
-2 2064
-3 1040
-4 3088
-5 528
-6 2576
-7 1552
-8 3600
-9 272
-0 2320
 
-vol+ 1168
-vol- 3216
-
-ch+ 144
-ch- 2192
-
-power 2704
-mute 656
-input 2640
-*/
   //if mode 6, translate analog pin(A5) to motion
   knobControl();
   
@@ -393,27 +371,27 @@ void homeStepper2(){
 }
 //////////////////////////////////////
 
-// Converting from Hex to Decimal:
 
-// NOTE: This function can handle a positive hex value from 0 - 65,535 (a four digit hex string).
-//       For larger/longer values, change "unsigned int" to "long" in both places.
+/*
+sony IR codes
+1 16
+2 2064
+3 1040
+4 3088
+5 528
+6 2576
+7 1552
+8 3600
+9 272
+0 2320
 
+vol+ 1168
+vol- 3216
 
-unsigned int hexToDec(String hexString) {
-  
-  unsigned int decValue = 0;
-  int nextInt;
-  
-  for (int i = 0; i < hexString.length(); i++) {
-    
-    nextInt = int(hexString.charAt(i));
-    if (nextInt >= 48 && nextInt <= 57) nextInt = map(nextInt, 48, 57, 0, 9);
-    if (nextInt >= 65 && nextInt <= 70) nextInt = map(nextInt, 65, 70, 10, 15);
-    if (nextInt >= 97 && nextInt <= 102) nextInt = map(nextInt, 97, 102, 10, 15);
-    nextInt = constrain(nextInt, 0, 15);
-    
-    decValue = (decValue * 16) + nextInt;
-  }
-  
-  return decValue;
-}
+ch+ 144
+ch- 2192
+
+power 2704
+mute 656
+input 2640
+*/
