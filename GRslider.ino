@@ -29,7 +29,7 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
 
 //////////////////////////
 //Define Relay pins
-#define RELAY1  38                        
+#define RELAY0  38                        
 #define RELAY1  40                        
 #define RELAY2  42                       
 #define RELAY3  46                        
