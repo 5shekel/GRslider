@@ -29,6 +29,7 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
 
 //////////////////////////
 //Define Relay pins
+#define RELAY1  38                        
 #define RELAY1  40                        
 #define RELAY2  42                       
 #define RELAY3  46                        
@@ -98,9 +99,6 @@ void sleepAll(){
   Serial.println("steppers sleep");
 }
 
-void knobEnable(){
-  knobGo = 1;
-}
 
 void knobControl(){
     if(knobGo) {
@@ -162,11 +160,13 @@ void goStepper2(int i_dest){
 void setup(){
   //// RELAYS //////
     //Relays (solenoids)
+  pinMode(RELAY0,OUTPUT);//relay1
   pinMode(RELAY1,OUTPUT);//relay1
   pinMode(RELAY2,OUTPUT);//relay2
   pinMode(RELAY3,OUTPUT);//relay3
   pinMode(RELAY4,OUTPUT);//relay4
   pinMode(RELAY5,OUTPUT);//relay5
+  digitalWrite(RELAY0,LOW);//reset relay1
   digitalWrite(RELAY1,LOW);//reset relay1
   digitalWrite(RELAY2,LOW);//reset relay2
   digitalWrite(RELAY3,LOW);//reset relay3
@@ -285,6 +285,7 @@ void HandleNoteOff(byte channel, byte pitch, byte velocity) {
   if(pitch==40) pitch = 16;
   if(pitch==41) pitch = 17;
   if(pitch==43) pitch = 18;
+  if(pitch==44) pitch = 19;
 
   if(pitch==45) pitch = 1 ; //strummm
 
@@ -313,6 +314,7 @@ void HandleNoteOn(byte channel, byte pitch, byte velocity) {
   if(pitch==40) pitch = 16;
   if(pitch==41) pitch = 17;
   if(pitch==43) pitch = 18;
+  if(pitch==44) pitch = 19;
 
   if(pitch==45) pitch = 1; //strummm
 
@@ -327,6 +329,7 @@ void HandleNoteOn(byte channel, byte pitch, byte velocity) {
   if(pitch == 81) pitch = 8;
 
   if(pitch == 83) pitch = 0; //strummm
+  if(pitch == 84) pitch = 2; //knob
 
   switchesOn(pitch, velocity);
 }
@@ -341,6 +344,7 @@ void switchsOff(int I_pitch, int I_velocity){
 
     default:
        //pick all other notes as knocks
+        if(I_pitch==14) digitalWrite(RELAY0, LOW); //turn off relay5  
         if(I_pitch==15) digitalWrite(RELAY1, LOW); //turn off relay1
         if(I_pitch==16) digitalWrite(RELAY2, LOW); //turn off relay2
         if(I_pitch==17) digitalWrite(RELAY3, LOW); //turn off relay3
@@ -366,7 +370,8 @@ void switchesOn(int I_pitch, int I_velocity){
             break;
           
           case 2:
-            //was random pos for guitar slider, move to end
+          //knob control, will be decrepted
+            knobGo = 1;
             break; 
           
           case 3: 
