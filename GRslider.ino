@@ -1,27 +1,23 @@
 // GRslider for arduino mega 2560
 
+#define DEBUG true
+#define IR_enable false 
+
 ///// MIDI ///////
 #include "MIDI.h"
 #include "midi_Defs.h"
 #include "midi_Message.h"
 #include "midi_Namespace.h"
 #include "midi_Settings.h"
-#include "Streaming.h"
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
 ////////////////////////
+
 #include <AccelStepper.h>
 #include "Streaming.h"
 
-#define DEBUG true
-///// CmdMessenger //////
-#include <CmdMessenger.h>
-////////////////////////////
-
 ////////// IR remote /////////
-
-#include <IRremote.h>
-#define IR_enable true 
 #ifdef IR_enable
+  #include <IRremote.h>
   int RECV_PIN = 13;
   int prevRes;
   long previousMillisIR = 0; 
@@ -31,8 +27,17 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
 #endif
 //////////////////////////
 
-//STEPPER PROPERTIES
+//////////////////////////
+//Define Relay pins
+#define RELAY1  40                        
+#define RELAY2  42                       
+#define RELAY3  46                        
+#define RELAY4  48
+#define RELAY5  50
+//////////////////////////
 
+
+//STEPPER PROPERTIES
 //////// #1 //////////////
 int stepper1_Speed = 400;
 
@@ -76,105 +81,6 @@ int readings[numReadings];      // the readings from the analog input
 int readIndex = 0;              // the index of the current reading
 int total = 0;                  // the running total
 int average = 0;                // the average
-
-//////////////////////////////////////////////////////////////////
-// Attach a new CmdMessenger object to the default Serial port
-CmdMessenger cmdMessenger = CmdMessenger(Serial);
-// This is the list of recognized commands.  
-// In order to receive, attach a callback function to these events
-enum
-{
-  kCommandList         , // Command to request list of available commands
-  kSetSpeed1              , // Command to set speed
-  kSetSpeed2              , // Command to set speed
-  kSetAccel   , // Command to set acceleartion
-  kGoStepper2           , // Command to move stepper
-  kHome           , // Command to home stepper
-  kSleep          , //comand to send motor to sleep
-  kKnob           , //translate knob to motion
-  kGoStepper1           , //pluck string
-};
-
-// Callbacks define on which received commands we take action
-void attachCommandCallbacks(){
-  // Attach callback methods
-  cmdMessenger.attach(OnUnknownCommand);
-  cmdMessenger.attach(kCommandList, OnCommandList);
-  cmdMessenger.attach(kSetSpeed1, OnSetSpeed1);
-  cmdMessenger.attach(kSetSpeed2, OnSetSpeed2);
-  cmdMessenger.attach(kSetAccel, OnSetaccel2);
-  cmdMessenger.attach(kGoStepper2, onGo2);
-  cmdMessenger.attach(kHome, homeAll);
-  cmdMessenger.attach(kSleep, sleepAll);
-  cmdMessenger.attach(kKnob,  knobEnable);
-  cmdMessenger.attach(kGoStepper1, onGo1);
-}
-// Called when a received command has no attached function
-void OnUnknownCommand(){
-  Serial.println("This command is unknown!");
-  ShowCommands();
-}
-
-// Callback function that shows a list of commands
-void OnCommandList(){  ShowCommands();}
-
-// Show available commands
-void ShowCommands() 
-{
-  Serial.println("Available commands");
-  Serial.println(" 0;                 - This command list");
-  Serial.println(" 1,<set speed stepper1>;     - Set speed. 50-550");
-  Serial.println(" 2,<set speed stepper2>;     - Set speed. 100-25,600");
-  Serial.println(" 3,<set accelaration>; - Set acceleration 100-10,000 "); 
-  Serial.println(" 4;                  - go stepper 2");
-  Serial.println(" 5;                  - home stepper");
-  Serial.println(" 6;                  - sleep stepper");
-  Serial.println(" 7;                  - knob controller");
-  Serial.println(" 8;                  - pick movement (stepper 1)");
-  showVals();
-}
-
-void showVals(){
-  Serial<<"current speed 1: "<<stepper1_Speed<<endl;
-  Serial<<"current speed 2: "<<stepper2_Speed<<endl;
-  Serial<<"current accel 2: "<<stepper2_accl<<endl; 
-}
-void OnSetaccel2(){
-  stepper2_accl = cmdMessenger.readInt16Arg(); 
-  showVals();
-}
-
-void OnSetSpeed1(){
-  stepper1_Speed = cmdMessenger.readInt16Arg(); 
-  //set the speed for next movement now
-  if(limit_A==1)
-      stepper1.setSpeed(-stepper1_Speed);
-  else
-      stepper1.setSpeed(stepper1_Speed);
-
-  showVals();
-}
-
-void OnSetSpeed2(){
-  stepper2_Speed = cmdMessenger.readInt16Arg(); 
-    //set the speed for next movement now
-  stepper2.setSpeed(stepper2_Speed);
-  showVals();
-}
-
-void onGo1(){
-  //we call this to initiate the stepper 1 action
- // stepper1.enableOutputs();
-  stepperMove = 1;
-  stepper1.enableOutputs();
-}
-
-void onGo2(){
-  //if before we had know, first go home then start the random stepping
-  if(knobGo) homeAll();
-  stepper2.enableOutputs();
-  randStepper2();
-}
 
 void homeAll(){
   knobGo=0; //stop knob if its on
@@ -246,17 +152,29 @@ void stepper1_action(){
   }
 }
 
-void randStepper2(){
+void goStepper2(int i_dest){
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setAcceleration(stepper2_accl);
-  int dest = scalePos[random(arrLen-1)];
-
-  if(DEBUG) Serial.println(dest);
-  stepper2.moveTo(dest);
+  stepper2.moveTo(i_dest);
 }
 
 
 void setup(){
+  //// RELAYS //////
+    //Relays (solenoids)
+  pinMode(RELAY1,OUTPUT);//relay1
+  pinMode(RELAY2,OUTPUT);//relay2
+  pinMode(RELAY3,OUTPUT);//relay3
+  pinMode(RELAY4,OUTPUT);//relay4
+  pinMode(RELAY5,OUTPUT);//relay5
+  digitalWrite(RELAY1,LOW);//reset relay1
+  digitalWrite(RELAY2,LOW);//reset relay2
+  digitalWrite(RELAY3,LOW);//reset relay3
+  digitalWrite(RELAY4,LOW);//reset relay4
+  digitalWrite(RELAY5,LOW);//reset relay4
+  //////////////////////////////
+
+
   /////// stepper 1 ////////
   stepper1.setPinsInverted(14,0,1); //dir, step, enable
   stepper1.setMaxSpeed(stepper1_Speed);
@@ -275,12 +193,7 @@ void setup(){
   pinMode(limitPin2a, INPUT_PULLUP); //arm the pullup for limit pin
 
   ////////////////////////////
-  if(DEBUG){
-    Serial.begin(115200);
-    cmdMessenger.printLfCr();   // Adds newline to every command 
-    attachCommandCallbacks();// Attach my application's user-defined callback methods
-    ShowCommands(); // Show command list
-  }
+  if(DEBUG)    Serial.begin(115200);
 
     // setup for IR debounce 
     // initialize all the readings to 0: 
@@ -296,47 +209,20 @@ void setup(){
 
   /// MIDI ///
   midiA.setHandleNoteOn(HandleNoteOn);
+  midiA.setHandleNoteOff(HandleNoteOff);
   midiA.begin(MIDI_CHANNEL_OMNI);   
 }
 
 void loop(){
-  // Process incoming serial data, and perform callbacks
-  if(DEBUG) cmdMessenger.feedinSerialData();
+
   if(IR_enable){
     unsigned long currentMillisIR = millis();
     if (irrecv.decode(&results)) {
       if(currentMillisIR - previousMillisIR > IRinterval) {
         previousMillisIR = currentMillisIR;   
         //do something here
-        Serial.println(results.value);
-                switch(results.value){
-
-          case 656: //mute
-            homeAll();
-            break; 
-          case 2704: //power
-            onGo1();
-            break;
-          case 2640: // input
-            onGo2();
-            break; 
-          case 1168: // vol+
-            stepper1_Speed += 50;
-            showVals();
-            break; 
-          case 3216: // vol-
-            stepper1_Speed -= 50;
-            showVals();
-            break;
-          case 144: // ch+
-            stepper2_Speed += 100;
-            showVals();
-            break; 
-          case 2192: // ch-
-            stepper2_Speed -= 100;
-            showVals();
-            break;  
-        }
+        if(DEBUG) Serial.println(results.value);
+        switchesOn(results.value, 0);
 
       }
       irrecv.resume(); // Receive the next value
@@ -349,9 +235,6 @@ void loop(){
   stepper1_action();
   stepper2.run(); // slider stepper 02
 }
-
-/////////// SERIAL CONTROL //////
-
 
 ////////// STEPPER SEQ ///////////
 
@@ -394,44 +277,146 @@ void homeStepper2(){
 
 
 void HandleNoteOff(byte channel, byte pitch, byte velocity) {
-  switch (pitch) {
-    case 59:
-    break;
-  }
+  if(DEBUG) Serial << "midikey off>" << pitch << endl;
+
+  //mapping knocks
+  if(pitch==36) pitch = 14;
+  if(pitch==38) pitch = 15;
+  if(pitch==40) pitch = 16;
+  if(pitch==41) pitch = 17;
+  if(pitch==43) pitch = 18;
+
+  if(pitch==45) pitch = 1 ; //strummm
+
+  //mapping frets , maping starts at 20
+  if(pitch >= 47 && pitch <= 71)  pitch -= 27;  
+
+  if(pitch == 72) pitch = 3;
+  if(pitch == 74) pitch = 4;
+  if(pitch == 76) pitch = 5;
+  if(pitch == 77) pitch = 6;
+  if(pitch == 79) pitch = 7;
+  if(pitch == 81) pitch = 8;
+
+  if(pitch == 83) pitch = 0; //strummm
+
+  switchsOff(pitch, velocity);
 }
 
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
-//midi keys
-//q60 w62 e64 r65 t67 y69 
-  switch (pitch) {
-          case 74: 
+  if(DEBUG) Serial << "midikey  on>" << pitch << endl;
+
+  //mapping knocks
+  if(pitch==36) pitch = 14;
+  if(pitch==38) pitch = 15;
+  if(pitch==40) pitch = 16;
+  if(pitch==41) pitch = 17;
+  if(pitch==43) pitch = 18;
+
+  if(pitch==45) pitch = 1; //strummm
+
+  //mapping frets , maping starts at 20
+  if(pitch >= 47 && pitch <= 71)  pitch -= 27;  
+
+  if(pitch == 72) pitch = 3;
+  if(pitch == 74) pitch = 4;
+  if(pitch == 76) pitch = 5;
+  if(pitch == 77) pitch = 6;
+  if(pitch == 79) pitch = 7;
+  if(pitch == 81) pitch = 8;
+
+  if(pitch == 83) pitch = 0; //strummm
+
+  switchesOn(pitch, velocity);
+}
+
+void switchsOff(int I_pitch, int I_velocity){
+  switch (I_pitch){
+    case 0:
+      break;
+
+    case 1:
+      break;
+
+    default:
+       //pick all other notes as knocks
+        if(I_pitch==15) digitalWrite(RELAY1, LOW); //turn off relay1
+        if(I_pitch==16) digitalWrite(RELAY2, LOW); //turn off relay2
+        if(I_pitch==17) digitalWrite(RELAY3, LOW); //turn off relay3
+        if(I_pitch==18) digitalWrite(RELAY4, LOW); //turn off relay4
+        if(I_pitch==19) digitalWrite(RELAY5, LOW); //turn off relay5  
+      break;
+  }
+      digitalWrite(RELAY1, LOW); //turn off relay1
+
+}
+void switchesOn(int I_pitch, int I_velocity){
+  //general switch function, this works with both MIDI and IR
+    switch (I_pitch) {
+          case 0: 
             homeAll();
+            if(DEBUG) Serial<<"homeAll"<<endl;
             break; 
-          case 76: 
-            onGo1();
+          
+          case 1: 
+            stepper1.enableOutputs();
+            stepperMove = 1;
+            if(DEBUG) Serial<<"stepper1_action"<<endl;
             break;
-          case 77:
-            onGo2();
+          
+          case 2:
+            //was random pos for guitar slider, move to end
             break; 
-          case 79: // vol+
+          
+          case 3: 
             stepper1_Speed += 50;
-            showVals();
+            if(DEBUG) Serial<<"current speed 1: "<<stepper1_Speed<<endl;
             break; 
-          case 81: // vol-
+          
+          case 4: 
             stepper1_Speed -= 50;
-            showVals();
+            if(DEBUG) Serial<<"current speed 1: "<<stepper1_Speed<<endl;
             break;
-          case 83: // ch+
+          
+          case 5: 
             stepper2_Speed += 100;
-            showVals();
+            if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
             break; 
-          case 84: // ch-
+          
+          case 6: 
             stepper2_Speed -= 100;
-            showVals();
+            if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
+            break;   
+
+          case 7: 
+            stepper2_accl += 100;
+            if(DEBUG) Serial<<"current accel 2: "<<stepper2_accl<<endl;
+            break; 
+          
+          case 8: 
+            stepper2_accl -= 100;
+            if(DEBUG) Serial<<"current accel 2: "<<stepper2_accl<<endl;
+            break; 
+
+          default: 
+          //pick all other notes as fret or knocks
+                 //pick all other notes as knocks
+            if(I_pitch==15) digitalWrite(RELAY1, HIGH); //turn on relay1
+            if(I_pitch==16) digitalWrite(RELAY2, HIGH); //turn on relay2
+            if(I_pitch==17) digitalWrite(RELAY3, HIGH); //turn on relay3
+            if(I_pitch==18) digitalWrite(RELAY4, HIGH); //turn on relay4
+            if(I_pitch==19) digitalWrite(RELAY5, HIGH); //turn on relay5 
+
+            if(I_pitch >= 20 && I_pitch <= 44){
+              if(DEBUG) Serial<< "FRET on> "<< I_pitch << endl;
+              stepper2.enableOutputs();
+              goStepper2(I_pitch);
+            }
             break;  
   } 
 }
+
 /*
 sony IR codes
 1 16
