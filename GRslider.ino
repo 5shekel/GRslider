@@ -62,9 +62,10 @@ int stepper2_accl = 4500;
 #define step2_ENABLE 12
 AccelStepper stepper2(1, step2_STEP, step2_DIR); //step / dir
 
-#define arrLen 5
+#define arrLen 19
 int scalePos[arrLen] = {
-  100, 225, 425, 650, 850};
+  0, 44, 88, 132, 176, 220, 264, 308, 352, 396, 
+  440, 484, 528, 572, 616, 660, 704, 748, 792};
 ///////////////////////////////
 
 ///////////////////////////////
@@ -127,8 +128,6 @@ void knobControl(){
     }
 }
 
-
-
 void stepper1_action(){
   if(stepperMove)
   {
@@ -153,7 +152,8 @@ void stepper1_action(){
 void goStepper2(int i_dest){
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setAcceleration(stepper2_accl);
-  stepper2.moveTo(i_dest);
+  Serial<<"scalePos[i_dest] "<<scalePos[i_dest]<<endl;
+  stepper2.moveTo(scalePos[i_dest]);
 }
 
 
@@ -416,6 +416,9 @@ void switchesOn(int I_pitch, int I_velocity){
             if(I_pitch >= 20 && I_pitch <= 44){
               if(DEBUG) Serial<< "FRET on> "<< I_pitch << endl;
               stepper2.enableOutputs();
+              
+              I_pitch -= 20;
+              if(DEBUG) Serial<< "FRET after> "<< I_pitch << endl;
               goStepper2(I_pitch);
             }
             break;  
