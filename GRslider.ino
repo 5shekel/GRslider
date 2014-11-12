@@ -1,20 +1,35 @@
-// GRslider_v2.1 arduino mega
-// classes
+// GRslider for arduino mega 2560
 
+///// MIDI ///////
+#include "MIDI.h"
+#include "midi_Defs.h"
+#include "midi_Message.h"
+#include "midi_Namespace.h"
+#include "midi_Settings.h"
+#include "Streaming.h"
+MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
+////////////////////////
 #include <AccelStepper.h>
-  // CmdMessenger
-#include <CmdMessenger.h>
 #include "Streaming.h"
 
-#include <IRremote.h>
-int RECV_PIN = 13;
-int prevRes;
-long previousMillisIR = 0; 
-long IRinterval = 400;
-IRrecv irrecv(RECV_PIN);
-decode_results results;
-
 #define DEBUG true
+///// CmdMessenger //////
+#include <CmdMessenger.h>
+////////////////////////////
+
+////////// IR remote /////////
+
+#include <IRremote.h>
+#define IR_enable true 
+#ifdef IR_enable
+  int RECV_PIN = 13;
+  int prevRes;
+  long previousMillisIR = 0; 
+  long IRinterval = 400;
+  IRrecv irrecv(RECV_PIN);
+  decode_results results;
+#endif
+//////////////////////////
 
 //STEPPER PROPERTIES
 
@@ -259,37 +274,42 @@ void setup(){
   
   pinMode(limitPin2a, INPUT_PULLUP); //arm the pullup for limit pin
 
+  ////////////////////////////
   if(DEBUG){
-
-    irrecv.enableIRIn(); // Start the receiver
-
     Serial.begin(115200);
-
     cmdMessenger.printLfCr();   // Adds newline to every command 
     attachCommandCallbacks();// Attach my application's user-defined callback methods
     ShowCommands(); // Show command list
   }
 
+    // setup for IR debounce 
     // initialize all the readings to 0: 
-  for (int thisReading = 0; thisReading < numReadings; thisReading++)
-    readings[thisReading] = 0;  
+    if(IR_enable){ 
+      irrecv.enableIRIn(); // Start the receiver
+      for (int thisReading = 0; thisReading < numReadings; thisReading++)
+        readings[thisReading] = 0;  
+    }
 
   //run steppers until they hits the limit switch   
   homeStepper1();
-  homeStepper2();     
+  homeStepper2();  
+
+  /// MIDI ///
+  midiA.setHandleNoteOn(HandleNoteOn);
+  midiA.begin(MIDI_CHANNEL_OMNI);   
 }
 
 void loop(){
   // Process incoming serial data, and perform callbacks
   if(DEBUG) cmdMessenger.feedinSerialData();
-  if(DEBUG){
+  if(IR_enable){
     unsigned long currentMillisIR = millis();
     if (irrecv.decode(&results)) {
       if(currentMillisIR - previousMillisIR > IRinterval) {
         previousMillisIR = currentMillisIR;   
         //do something here
         Serial.println(results.value);
-        switch(results.value){
+                switch(results.value){
 
           case 656: //mute
             homeAll();
@@ -317,14 +337,15 @@ void loop(){
             showVals();
             break;  
         }
+
       }
       irrecv.resume(); // Receive the next value
     }
   }
 
+  midiA.read();
   //if mode 6, translate analog pin(A5) to motion
   knobControl();
-  
   stepper1_action();
   stepper2.run(); // slider stepper 02
 }
@@ -372,6 +393,45 @@ void homeStepper2(){
 //////////////////////////////////////
 
 
+void HandleNoteOff(byte channel, byte pitch, byte velocity) {
+  switch (pitch) {
+    case 59:
+    break;
+  }
+}
+
+
+void HandleNoteOn(byte channel, byte pitch, byte velocity) {
+//midi keys
+//q60 w62 e64 r65 t67 y69 
+  switch (pitch) {
+          case 74: 
+            homeAll();
+            break; 
+          case 76: 
+            onGo1();
+            break;
+          case 77:
+            onGo2();
+            break; 
+          case 79: // vol+
+            stepper1_Speed += 50;
+            showVals();
+            break; 
+          case 81: // vol-
+            stepper1_Speed -= 50;
+            showVals();
+            break;
+          case 83: // ch+
+            stepper2_Speed += 100;
+            showVals();
+            break; 
+          case 84: // ch-
+            stepper2_Speed -= 100;
+            showVals();
+            break;  
+  } 
+}
 /*
 sony IR codes
 1 16
