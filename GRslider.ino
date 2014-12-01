@@ -160,18 +160,18 @@ void goStepper2(int i_dest){
 void setup(){
   //// RELAYS //////
     //Relays (solenoids)
-  pinMode(RELAY0,OUTPUT);//relay1
+  pinMode(RELAY0,OUTPUT);//relay0
   pinMode(RELAY1,OUTPUT);//relay1
   pinMode(RELAY2,OUTPUT);//relay2
   pinMode(RELAY3,OUTPUT);//relay3
   pinMode(RELAY4,OUTPUT);//relay4
   pinMode(RELAY5,OUTPUT);//relay5
-  digitalWrite(RELAY0,LOW);//reset relay1
+  digitalWrite(RELAY0,LOW);//reset relay0
   digitalWrite(RELAY1,LOW);//reset relay1
   digitalWrite(RELAY2,LOW);//reset relay2
   digitalWrite(RELAY3,LOW);//reset relay3
   digitalWrite(RELAY4,LOW);//reset relay4
-  digitalWrite(RELAY5,LOW);//reset relay4
+  digitalWrite(RELAY5,LOW);//reset relay5
   //////////////////////////////
 
 
@@ -279,13 +279,13 @@ void homeStepper2(){
 void HandleNoteOff(byte channel, byte pitch, byte velocity) {
   if(DEBUG) Serial << "midikey off>" << pitch << endl;
 
-  //mapping knocks
+  //mapping solenoids knocks
   if(pitch==36) pitch = 14;
-  if(pitch==38) pitch = 15;
-  if(pitch==40) pitch = 16;
-  if(pitch==41) pitch = 17;
-  if(pitch==43) pitch = 18;
-  if(pitch==44) pitch = 19;
+  if(pitch==37) pitch = 15;
+  if(pitch==38) pitch = 16;
+  if(pitch==39) pitch = 17;
+  if(pitch==40) pitch = 18;
+  if(pitch==41) pitch = 19;
 
   if(pitch==45) pitch = 1 ; //strummm
 
@@ -308,13 +308,13 @@ void HandleNoteOff(byte channel, byte pitch, byte velocity) {
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
   if(DEBUG) Serial << "midikey  on>" << pitch << endl;
 
-  //mapping knocks
+  //mapping solenoids knocks 
   if(pitch==36) pitch = 14;
-  if(pitch==38) pitch = 15;
-  if(pitch==40) pitch = 16;
-  if(pitch==41) pitch = 17;
-  if(pitch==43) pitch = 18;
-  if(pitch==44) pitch = 19;
+  if(pitch==37) pitch = 15;
+  if(pitch==38) pitch = 16;
+  if(pitch==39) pitch = 17;
+  if(pitch==40) pitch = 18;
+  if(pitch==41) pitch = 19;
 
   if(pitch==45) pitch = 1; //strummm
 
@@ -344,7 +344,7 @@ void switchsOff(int I_pitch, int I_velocity){
 
     default:
        //pick all other notes as knocks
-        if(I_pitch==14) digitalWrite(RELAY0, LOW); //turn off relay5  
+        if(I_pitch==14) digitalWrite(RELAY0, LOW); //turn off relay0  
         if(I_pitch==15) digitalWrite(RELAY1, LOW); //turn off relay1
         if(I_pitch==16) digitalWrite(RELAY2, LOW); //turn off relay2
         if(I_pitch==17) digitalWrite(RELAY3, LOW); //turn off relay3
@@ -407,6 +407,7 @@ void switchesOn(int I_pitch, int I_velocity){
           default: 
           //pick all other notes as fret or knocks
                  //pick all other notes as knocks
+			if(I_pitch==14) digitalWrite(RELAY0, HIGH); //turn on relay0
             if(I_pitch==15) digitalWrite(RELAY1, HIGH); //turn on relay1
             if(I_pitch==16) digitalWrite(RELAY2, HIGH); //turn on relay2
             if(I_pitch==17) digitalWrite(RELAY3, HIGH); //turn on relay3
@@ -437,13 +438,10 @@ sony IR codes
 8 3600
 9 272
 0 2320
-
 vol+ 1168
 vol- 3216
-
 ch+ 144
 ch- 2192
-
 power 2704
 mute 656
 input 2640
