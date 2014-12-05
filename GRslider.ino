@@ -32,9 +32,9 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
 #define RELAY0  38                        
 #define RELAY1  40                        
 #define RELAY2  42                       
-#define RELAY3  46                        
-#define RELAY4  48
-#define RELAY5  50
+#define RELAY3  44                        
+#define RELAY4  46
+#define RELAY5  48
 //////////////////////////
 
 
@@ -352,7 +352,7 @@ void switchsOff(int I_pitch, int I_velocity){
         if(I_pitch==19) digitalWrite(RELAY5, LOW); //turn off relay5  
       break;
   }
-      digitalWrite(RELAY1, LOW); //turn off relay1
+     // digitalWrite(RELAY1, LOW); //turn off relay1 ???
 
 }
 void switchesOn(int I_pitch, int I_velocity){
@@ -407,7 +407,7 @@ void switchesOn(int I_pitch, int I_velocity){
           default: 
           //pick all other notes as fret or knocks
                  //pick all other notes as knocks
-			if(I_pitch==14) digitalWrite(RELAY0, HIGH); //turn on relay0
+	    if(I_pitch==14) digitalWrite(RELAY0, HIGH); //turn on relay0
             if(I_pitch==15) digitalWrite(RELAY1, HIGH); //turn on relay1
             if(I_pitch==16) digitalWrite(RELAY2, HIGH); //turn on relay2
             if(I_pitch==17) digitalWrite(RELAY3, HIGH); //turn on relay3
