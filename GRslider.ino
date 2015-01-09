@@ -61,7 +61,6 @@ int measurementInterval = 50;
 // when the serial input was last checked.
 long lastMeasurementTime = 0L;
 
-int midikey;
 
 void homeAll(){
   stepper1.enableOutputs();
@@ -197,80 +196,80 @@ void homeStepper2(){
 
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
-  if(DEBUG) Serial << "key> " << pitch << "  vel> "<< velocity <<endl;
+
+ //midiEvent=random(999999); // 
 
   // map the midi key (pitch) to a serialize number 
   // it makes it somewhat easier to add diffrent control 
   // like IR or analog, but its also a mess to remmber :/
 
-  if(pitch == 83) midikey = 0; //home
-  if(pitch==45) midikey = 1; //strummm
+  if(pitch == 83) event = 0; //home
+  if(pitch==45) event = 1; //strummm
 
   // mapping solenoids knocks 
-  if(pitch==36) midikey = 14;
-  if(pitch==37) midikey = 15;
-  if(pitch==38) midikey = 16;
-  if(pitch==39) midikey = 17;
-  if(pitch==40) midikey = 18;
-  if(pitch==41) midikey = 19;
+  if(pitch==36) event = 14;
+  if(pitch==37) event = 15;
+  if(pitch==38) event = 16;
+  if(pitch==39) event = 17;
+  if(pitch==40) event = 18;
+  if(pitch==41) event = 19;
 
 
   //mapping frets , maping starts at 20
   if(pitch >= 47 && pitch <= 66)
-    midikey = pitch - 27;  
+    event = pitch - 27;  
 
 //various velocity changes for fret an strum
-  if(pitch == 72) midikey = 3; //strum speed +
-  if(pitch == 74) midikey = 4; //strum speed -
-  if(pitch == 76) midikey = 5; //slider speed +
-  if(pitch == 77) midikey = 6; //slider speed -
-  if(pitch == 79) midikey = 7; //slider accel +
-  if(pitch == 81) midikey = 8; //slider accel -
-// 
+  if(pitch == 72) event = 3; //strum speed +
+  if(pitch == 74) event = 4; //strum speed -
+  if(pitch == 76) event = 5; //slider speed +
+  if(pitch == 77) event = 6; //slider speed -
+  if(pitch == 79) event = 7; //slider accel +
+  if(pitch == 81) event = 8; //slider accel -
 
-  if(DEBUG) Serial << "I_midikey handle> " << midikey << endl;
 
-  switchesOn(midikey, velocity);
+  if(DEBUG) Serial << "key> " << pitch << "  vel> "<< velocity <<endl;
+  switchesOn(event, velocity);
 }
 
 void HandleNoteOff(byte channel, byte pitch, byte velocity){
-   switchsOff(midikey, velocity);
+  // this part is DEADLY, needs to ID midi event s better
+  // why no unique id for events?
+   switchsOff(event, velocity);
 }
 
 
-void switchsOff(int I_midikey, int I_velocity){
-  switch (I_midikey){
+void switchsOff(int I_event, int I_velocity){
+  switch (I_event){
     case 0:
       break;
 
     default:
        //pick all other notes as knocks
-        if(I_midikey==14) digitalWrite(RELAY0, LOW); //turn off relay0  
-        if(I_midikey==15) digitalWrite(RELAY1, LOW); //turn off relay1
-        if(I_midikey==16) digitalWrite(RELAY2, LOW); //turn off relay2
-        if(I_midikey==17) digitalWrite(RELAY3, LOW); //turn off relay3
-        if(I_midikey==18) digitalWrite(RELAY4, LOW); //turn off relay4
-        if(I_midikey==19) digitalWrite(RELAY5, LOW); //turn off relay5  
+        if(I_event==14) digitalWrite(RELAY0, LOW); //turn off relay0  
+        if(I_event==15) digitalWrite(RELAY1, LOW); //turn off relay1
+        if(I_event==16) digitalWrite(RELAY2, LOW); //turn off relay2
+        if(I_event==17) digitalWrite(RELAY3, LOW); //turn off relay3
+        if(I_event==18) digitalWrite(RELAY4, LOW); //turn off relay4
+        if(I_event==19) digitalWrite(RELAY5, LOW); //turn off relay5  
       break;
   }
 }
 
-void switchesOn(int I_midikey, int I_velocity){
-    if(DEBUG) Serial << "I_midikey> " << I_midikey << endl;
-
+void switchesOn(int I_event, int I_velocity){
   //general switch function, this works with both MIDI and IR
-      switch (I_midikey) {
+      switch (I_event) {
             default: 
           //pick all other notes as fret or knocks
-            if(I_midikey==14) digitalWrite(RELAY0, HIGH); //turn on relay0
-            if(I_midikey==15) digitalWrite(RELAY1, HIGH); //turn on relay1
-            if(I_midikey==16) digitalWrite(RELAY2, HIGH); //turn on relay2
-            if(I_midikey==17) digitalWrite(RELAY3, HIGH); //turn on relay3
-            if(I_midikey==18) digitalWrite(RELAY4, HIGH); //turn on relay4
-            if(I_midikey==19) digitalWrite(RELAY5, HIGH); //turn on relay5 
+            if(I_event==14) digitalWrite(RELAY0, HIGH); //turn on relay0
+            if(I_event==15) digitalWrite(RELAY1, HIGH); //turn on relay1
+            if(I_event==16) digitalWrite(RELAY2, HIGH); //turn on relay2
+            if(I_event==17) digitalWrite(RELAY3, HIGH); //turn on relay3
+            if(I_event==18) digitalWrite(RELAY4, HIGH); //turn on relay4
+            if(I_event==19) digitalWrite(RELAY5, HIGH); //turn on relay5 
 
-            if(I_midikey >= 20 && I_midikey <= 44){
-              goStepper2(I_midikey);
+            if(I_event >= 20 && I_event <= 44){
+              goStepper2(I_event);
             }
             break;  
 
@@ -332,7 +331,33 @@ void goStepper2(int i_dest){
   stepper2.moveTo(scalePos[i_dest-20]);
 }
 
-void slideCtrl(){
+
+class UuidClass
+{
+  // from TrueRandomClass::memfill
+  public:
+    void memfill(char* location, int size){
+        for (;size--;) *location++ = random(1); //randomByte();
+    };
+
+    void uuid(uint8_t* uuidLocation)
+    {
+      // Generate a Version 4 UUID according to RFC4122
+      memfill((char*)uuidLocation,16);
+
+      // Although the UUID contains 128 bits, only 122 of those are random.
+      // The other 6 bits are fixed, to indicate a version number.
+      uuidLocation[6] = 0x40 | (0x0F & uuidLocation[6]); 
+      uuidLocation[8] = 0x80 | (0x3F & uuidLocation[8]);
+    };
+    //or inside an external void UuidClass::uuid(uint8_t* uuidLocation) {..}
+}; 
 
 
+//we are starting a tiny class for this to manage them better
+//now there is a possiblity of giving a note off in a diffrent event. etc.
+class midiEvent
+{
+  public;
+    void gen(uint8_t* )
 }
