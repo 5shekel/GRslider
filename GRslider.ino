@@ -61,15 +61,8 @@ int scalePos[arrLen] = {
 int measurementInterval = 50;
 // when the serial input was last checked.
 long lastMeasurementTime = 0L;
-int sensorPin = A5;    // select the input pin for the potentiometer
-int sensorValue = 0;  // variable to store the value coming from the sensor
 
-// smoothing stage, via analog/smoothing example
-const int numReadings = 5;
-int readings[numReadings];      // the readings from the analog input
-int readIndex = 0;              // the index of the current reading
-int total = 0;                  // the running total
-int average = 0;                // the average
+int midikey;
 
 void homeAll(){
   stepper1.enableOutputs();
@@ -166,8 +159,7 @@ void setup(){
 
 void loop(){
   midiA.read();
-  //if mode 6, translate analog pin(A5) to motion
-  stepper1_action();
+  stepper1_action(); 
   stepper2.run(); // slider stepper 02
 }
 
@@ -203,7 +195,7 @@ void homeStepper2(){
     stepper2.run();
   }
 
-  if(DEBUG)Serial.println("steps:"); //how many steps did we take to reach home
+  if(DEBUG)Serial.print("steps to home: "); //how many steps did we take to reach home
   if(DEBUG)Serial.println(stepper2.currentPosition());
   stepper2.setCurrentPosition(0);
   stepper2.disableOutputs();
@@ -211,88 +203,71 @@ void homeStepper2(){
 //////////////////////////////////////
 
 
-void HandleNoteOff(byte channel, byte pitch, byte velocity) {
-  if(DEBUG) Serial << "midikey off>" << pitch << endl;
-
-  //mapping solenoids knocks
-  if(pitch==36) pitch = 14;
-  if(pitch==37) pitch = 15;
-  if(pitch==38) pitch = 16;
-  if(pitch==39) pitch = 17;
-  if(pitch==40) pitch = 18;
-  if(pitch==41) pitch = 19;
-
-  if(pitch==45) pitch = 1 ; //strummm
-
-  //mapping frets , maping starts at 20
-  if(pitch >= 47 && pitch <= 71)  pitch -= 27;  
-
-  if(pitch == 72) pitch = 3;
-  if(pitch == 74) pitch = 4;
-  if(pitch == 76) pitch = 5;
-  if(pitch == 77) pitch = 6;
-  if(pitch == 79) pitch = 7;
-  if(pitch == 81) pitch = 8;
-
-  if(pitch == 83) pitch = 0; //strummm
-
-  switchsOff(pitch, velocity);
-}
-
-
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
-  if(DEBUG) Serial << "midikey  on>" << pitch << endl;
+  if(DEBUG) Serial << "key> " << pitch << "  vel> "<< velocity <<endl;
 
-  //mapping solenoids knocks 
-  if(pitch==36) pitch = 14;
-  if(pitch==37) pitch = 15;
-  if(pitch==38) pitch = 16;
-  if(pitch==39) pitch = 17;
-  if(pitch==40) pitch = 18;
-  if(pitch==41) pitch = 19;
+  // map the midi key (pitch) to a serialize number 
+  // it makes it somewhat easier to add diffrent control 
+  // like IR or analog, but its also a mess to remmber :/
 
-  if(pitch==45) pitch = 1; //strummm
+  if(pitch == 83) midikey = 0; //home
+  if(pitch==45) midikey = 1; //strummm
+  
+  // mapping solenoids knocks 
+  if(pitch==36) midikey = 14;
+  if(pitch==37) midikey = 15;
+  if(pitch==38) midikey = 16;
+  if(pitch==39) midikey = 17;
+  if(pitch==40) midikey = 18;
+  if(pitch==41) midikey = 19;
+
 
   //mapping frets , maping starts at 20
-  if(pitch >= 47 && pitch <= 71)  pitch -= 27;  
+  if(pitch >= 47 && pitch <= 66)
+    midikey = pitch - 27;  
 
-  if(pitch == 72) pitch = 3;
-  if(pitch == 74) pitch = 4;
-  if(pitch == 76) pitch = 5;
-  if(pitch == 77) pitch = 6;
-  if(pitch == 79) pitch = 7;
-  if(pitch == 81) pitch = 8;
+//various velocity changes for fret an strum
+  if(pitch == 72) midikey = 3; //strum speed +
+  if(pitch == 74) midikey = 4; //strum speed -
+  if(pitch == 76) midikey = 5; //slider speed +
+  if(pitch == 77) midikey = 6; //slider speed -
+  if(pitch == 79) midikey = 7; //slider accel +
+  if(pitch == 81) midikey = 8; //slider accel -
+// 
 
-  if(pitch == 83) pitch = 0; //strummm
-  if(pitch == 84) pitch = 2; //knob
+    if(DEBUG) Serial << "I_midikey handle> " << midikey << endl;
 
-  switchesOn(pitch, velocity);
+  switchesOn(midikey, velocity);
 }
 
-void switchsOff(int I_pitch, int I_velocity){
-  switch (I_pitch){
-    case 0:
-      break;
+void HandleNoteOff(byte channel, byte pitch, byte velocity) {
+   switchsOff(midikey, velocity);
+}
 
-    case 1:
+
+
+void switchsOff(int I_midikey, int I_velocity){
+  switch (I_midikey){
+    case 0:
       break;
 
     default:
        //pick all other notes as knocks
-        if(I_pitch==14) digitalWrite(RELAY0, LOW); //turn off relay0  
-        if(I_pitch==15) digitalWrite(RELAY1, LOW); //turn off relay1
-        if(I_pitch==16) digitalWrite(RELAY2, LOW); //turn off relay2
-        if(I_pitch==17) digitalWrite(RELAY3, LOW); //turn off relay3
-        if(I_pitch==18) digitalWrite(RELAY4, LOW); //turn off relay4
-        if(I_pitch==19) digitalWrite(RELAY5, LOW); //turn off relay5  
+        if(I_midikey==14) digitalWrite(RELAY0, LOW); //turn off relay0  
+        if(I_midikey==15) digitalWrite(RELAY1, LOW); //turn off relay1
+        if(I_midikey==16) digitalWrite(RELAY2, LOW); //turn off relay2
+        if(I_midikey==17) digitalWrite(RELAY3, LOW); //turn off relay3
+        if(I_midikey==18) digitalWrite(RELAY4, LOW); //turn off relay4
+        if(I_midikey==19) digitalWrite(RELAY5, LOW); //turn off relay5  
       break;
   }
-     // digitalWrite(RELAY1, LOW); //turn off relay1 ???
 
 }
-void switchesOn(int I_pitch, int I_velocity){
+void switchesOn(int I_midikey, int I_velocity){
+    if(DEBUG) Serial << "I_midikey> " << I_midikey << endl;
+
   //general switch function, this works with both MIDI and IR
-    switch (I_pitch) {
+    switch (I_midikey) {
           case 0: 
             homeAll();
             if(DEBUG) Serial<<"homeAll"<<endl;
@@ -340,43 +315,27 @@ void switchesOn(int I_pitch, int I_velocity){
 
           default: 
           //pick all other notes as fret or knocks
-                 //pick all other notes as knocks
-	    if(I_pitch==14) digitalWrite(RELAY0, HIGH); //turn on relay0
-            if(I_pitch==15) digitalWrite(RELAY1, HIGH); //turn on relay1
-            if(I_pitch==16) digitalWrite(RELAY2, HIGH); //turn on relay2
-            if(I_pitch==17) digitalWrite(RELAY3, HIGH); //turn on relay3
-            if(I_pitch==18) digitalWrite(RELAY4, HIGH); //turn on relay4
-            if(I_pitch==19) digitalWrite(RELAY5, HIGH); //turn on relay5 
+            if(I_midikey==14) digitalWrite(RELAY0, HIGH); //turn on relay0
+            if(I_midikey==15) digitalWrite(RELAY1, HIGH); //turn on relay1
+            if(I_midikey==16) digitalWrite(RELAY2, HIGH); //turn on relay2
+            if(I_midikey==17) digitalWrite(RELAY3, HIGH); //turn on relay3
+            if(I_midikey==18) digitalWrite(RELAY4, HIGH); //turn on relay4
+            if(I_midikey==19) digitalWrite(RELAY5, HIGH); //turn on relay5 
 
-            if(I_pitch >= 20 && I_pitch <= 44){
-              if(DEBUG) Serial<< "FRET on> "<< I_pitch << endl;
+            if(I_midikey >= 20 && I_midikey <= 44){
+              if(DEBUG) Serial<< "FRET on> "<< I_midikey << endl;
               stepper2.enableOutputs();
-              
-              I_pitch -= 20;
-              if(DEBUG) Serial<< "FRET after> "<< I_pitch << endl;
-              goStepper2(I_pitch);
+
+              //????
+              I_midikey -= 20;
+              if(DEBUG) Serial<< "FRET after> "<< I_midikey << endl;
+              goStepper2(I_midikey);
             }
             break;  
   } 
 }
 
-/*
-sony IR codes
-1 16
-2 2064
-3 1040
-4 3088
-5 528
-6 2576
-7 1552
-8 3600
-9 272
-0 2320
-vol+ 1168
-vol- 3216
-ch+ 144
-ch- 2192
-power 2704
-mute 656
-input 2640
-*/
+void slideCtrl(){
+
+
+}
