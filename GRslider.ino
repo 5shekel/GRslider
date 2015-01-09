@@ -50,8 +50,7 @@ int stepper2_accl = 4500;
 #define step2_ENABLE 12
 AccelStepper stepper2(1, step2_STEP, step2_DIR); //step / dir
 
-#define arrLen 19
-int scalePos[arrLen] = {
+int scalePos[19] = {
   0, 44, 88, 132, 176, 220, 264, 308, 352, 396, 
   440, 484, 528, 572, 616, 660, 704, 748, 792};
 ///////////////////////////////
@@ -100,12 +99,6 @@ void stepper1_action(){
   }
 }
 
-void goStepper2(int i_dest){
-  stepper2.setMaxSpeed(stepper2_Speed);
-  stepper2.setAcceleration(stepper2_accl);
-  Serial<<"scalePos[i_dest] "<<scalePos[i_dest]<<endl;
-  stepper2.moveTo(scalePos[i_dest]);
-}
 
 
 void setup(){
@@ -212,7 +205,7 @@ void HandleNoteOn(byte channel, byte pitch, byte velocity) {
 
   if(pitch == 83) midikey = 0; //home
   if(pitch==45) midikey = 1; //strummm
-  
+
   // mapping solenoids knocks 
   if(pitch==36) midikey = 14;
   if(pitch==37) midikey = 15;
@@ -235,15 +228,14 @@ void HandleNoteOn(byte channel, byte pitch, byte velocity) {
   if(pitch == 81) midikey = 8; //slider accel -
 // 
 
-    if(DEBUG) Serial << "I_midikey handle> " << midikey << endl;
+  if(DEBUG) Serial << "I_midikey handle> " << midikey << endl;
 
   switchesOn(midikey, velocity);
 }
 
-void HandleNoteOff(byte channel, byte pitch, byte velocity) {
+void HandleNoteOff(byte channel, byte pitch, byte velocity){
    switchsOff(midikey, velocity);
 }
-
 
 
 void switchsOff(int I_midikey, int I_velocity){
@@ -261,13 +253,27 @@ void switchsOff(int I_midikey, int I_velocity){
         if(I_midikey==19) digitalWrite(RELAY5, LOW); //turn off relay5  
       break;
   }
-
 }
+
 void switchesOn(int I_midikey, int I_velocity){
     if(DEBUG) Serial << "I_midikey> " << I_midikey << endl;
 
   //general switch function, this works with both MIDI and IR
-    switch (I_midikey) {
+      switch (I_midikey) {
+            default: 
+          //pick all other notes as fret or knocks
+            if(I_midikey==14) digitalWrite(RELAY0, HIGH); //turn on relay0
+            if(I_midikey==15) digitalWrite(RELAY1, HIGH); //turn on relay1
+            if(I_midikey==16) digitalWrite(RELAY2, HIGH); //turn on relay2
+            if(I_midikey==17) digitalWrite(RELAY3, HIGH); //turn on relay3
+            if(I_midikey==18) digitalWrite(RELAY4, HIGH); //turn on relay4
+            if(I_midikey==19) digitalWrite(RELAY5, HIGH); //turn on relay5 
+
+            if(I_midikey >= 20 && I_midikey <= 44){
+              goStepper2(I_midikey);
+            }
+            break;  
+
           case 0: 
             homeAll();
             if(DEBUG) Serial<<"homeAll"<<endl;
@@ -312,27 +318,18 @@ void switchesOn(int I_midikey, int I_velocity){
             stepper2_accl -= 100;
             if(DEBUG) Serial<<"current accel 2: "<<stepper2_accl<<endl;
             break; 
-
-          default: 
-          //pick all other notes as fret or knocks
-            if(I_midikey==14) digitalWrite(RELAY0, HIGH); //turn on relay0
-            if(I_midikey==15) digitalWrite(RELAY1, HIGH); //turn on relay1
-            if(I_midikey==16) digitalWrite(RELAY2, HIGH); //turn on relay2
-            if(I_midikey==17) digitalWrite(RELAY3, HIGH); //turn on relay3
-            if(I_midikey==18) digitalWrite(RELAY4, HIGH); //turn on relay4
-            if(I_midikey==19) digitalWrite(RELAY5, HIGH); //turn on relay5 
-
-            if(I_midikey >= 20 && I_midikey <= 44){
-              if(DEBUG) Serial<< "FRET on> "<< I_midikey << endl;
-              stepper2.enableOutputs();
-
-              //????
-              I_midikey -= 20;
-              if(DEBUG) Serial<< "FRET after> "<< I_midikey << endl;
-              goStepper2(I_midikey);
-            }
-            break;  
   } 
+}
+
+
+void goStepper2(int i_dest){
+  //takes the various cntrols for the slider stepper2
+  // and starts to moves the stepper
+  stepper2.enableOutputs();
+  stepper2.setMaxSpeed(stepper2_Speed);
+  stepper2.setAcceleration(stepper2_accl);
+  //i refer here to two arrays discrbing the same memebers :/
+  stepper2.moveTo(scalePos[i_dest-20]);
 }
 
 void slideCtrl(){
