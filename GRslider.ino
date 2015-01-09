@@ -61,6 +61,7 @@ int measurementInterval = 50;
 // when the serial input was last checked.
 long lastMeasurementTime = 0L;
 
+int event; //see eventclass for more
 
 void homeAll(){
   stepper1.enableOutputs();
@@ -355,9 +356,9 @@ class UuidClass
 
 
 //we are starting a tiny class for this to manage them better
-//now there is a possiblity of giving a note off in a diffrent event. etc.
+//now there is a possibliteventy of giving a note off in a diffrent event. etc.
 class midiEvent
 {
-  public;
-    void gen(uint8_t* )
-}
+  public:
+  void gen(uint8_t* event, uint8_t* key, uint8_t* velocity ){};
+};
