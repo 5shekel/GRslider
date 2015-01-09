@@ -1,7 +1,6 @@
 // GRslider for arduino mega 2560
 
 #define DEBUG true
-#define IR_enable false 
 
 ///// MIDI ///////
 #include "MIDI.h"
@@ -15,17 +14,6 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
 #include <AccelStepper.h>
 #include "Streaming.h"
 
-////////// IR remote /////////
-#ifdef IR_enable
-  #include <IRremote.h>
-  int RECV_PIN = 13;
-  int prevRes;
-  long previousMillisIR = 0; 
-  long IRinterval = 400;
-  IRrecv irrecv(RECV_PIN);
-  decode_results results;
-#endif
-//////////////////////////
 
 //////////////////////////
 //Define Relay pins
@@ -75,7 +63,6 @@ int measurementInterval = 50;
 long lastMeasurementTime = 0L;
 int sensorPin = A5;    // select the input pin for the potentiometer
 int sensorValue = 0;  // variable to store the value coming from the sensor
-int knobGo = 0;
 
 // smoothing stage, via analog/smoothing example
 const int numReadings = 5;
@@ -85,7 +72,6 @@ int total = 0;                  // the running total
 int average = 0;                // the average
 
 void homeAll(){
-  knobGo=0; //stop knob if its on
   stepper1.enableOutputs();
   stepper2.enableOutputs();
   //run steppers until they hits the limit switch   
@@ -94,39 +80,11 @@ void homeAll(){
 }
 
 void sleepAll(){
-  knobGo=0;
   stepper1.disableOutputs();
   stepper2.disableOutputs();
   Serial.println("steppers sleep");
 }
 
-
-void knobControl(){
-    if(knobGo) {
-      stepper2.enableOutputs();
-      stepper2.setMaxSpeed(1000);
-      stepper2.setAcceleration(10000);
-
-      if (millis() > (lastMeasurementTime + measurementInterval)) {
-        sensorValue = analogRead(sensorPin);
-        sensorValue = map(sensorValue, 0 ,1024, 0, 800);
-        
-        total= total - readings[readIndex];         
-        readings[readIndex] = sensorValue;
-        total= total + readings[readIndex];       
-        readIndex = readIndex + 1;                    
-        if (readIndex >= numReadings)              
-          readIndex = 0;                           
-
-        average = total / numReadings; 
-
-        stepper2.moveTo(average);
-        Serial.println(average);
-
-        lastMeasurementTime = millis();
-      }
-    }
-}
 
 void stepper1_action(){
   if(stepperMove)
@@ -195,13 +153,6 @@ void setup(){
   ////////////////////////////
   if(DEBUG)    Serial.begin(115200);
 
-    // setup for IR debounce 
-    // initialize all the readings to 0: 
-    if(IR_enable){ 
-      irrecv.enableIRIn(); // Start the receiver
-      for (int thisReading = 0; thisReading < numReadings; thisReading++)
-        readings[thisReading] = 0;  
-    }
 
   //run steppers until they hits the limit switch   
   homeStepper1();
@@ -214,24 +165,8 @@ void setup(){
 }
 
 void loop(){
-
-  if(IR_enable){
-    unsigned long currentMillisIR = millis();
-    if (irrecv.decode(&results)) {
-      if(currentMillisIR - previousMillisIR > IRinterval) {
-        previousMillisIR = currentMillisIR;   
-        //do something here
-        if(DEBUG) Serial.println(results.value);
-        switchesOn(results.value, 0);
-
-      }
-      irrecv.resume(); // Receive the next value
-    }
-  }
-
   midiA.read();
   //if mode 6, translate analog pin(A5) to motion
-  knobControl();
   stepper1_action();
   stepper2.run(); // slider stepper 02
 }
@@ -370,8 +305,7 @@ void switchesOn(int I_pitch, int I_velocity){
             break;
           
           case 2:
-          //knob control, will be decrepted
-            knobGo = 1;
+
             break; 
           
           case 3: 
