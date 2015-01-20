@@ -63,20 +63,6 @@ long lastMeasurementTime = 0L;
 
 int midikey; //see eventclass for more
 
-void homeAll(){
-  stepper1.enableOutputs();
-  stepper2.enableOutputs();
-  //run steppers until they hits the limit switch   
-  homeStepper1();  
-  homeStepper2();  
-}
-
-void sleepAll(){
-  stepper1.disableOutputs();
-  stepper2.disableOutputs();
-  Serial.println("steppers sleep");
-}
-
 
 void stepper1_action(){
   if(stepperMove)
@@ -100,145 +86,46 @@ void stepper1_action(){
 }
 
 
-
-void setup(){
-  //// RELAYS //////
-    //Relays (solenoids)
-  pinMode(RELAY0,OUTPUT);//relay0
-  pinMode(RELAY1,OUTPUT);//relay1
-  pinMode(RELAY2,OUTPUT);//relay2
-  pinMode(RELAY3,OUTPUT);//relay3
-  pinMode(RELAY4,OUTPUT);//relay4
-  pinMode(RELAY5,OUTPUT);//relay5
-  digitalWrite(RELAY0,LOW);//reset relay0
-  digitalWrite(RELAY1,LOW);//reset relay1
-  digitalWrite(RELAY2,LOW);//reset relay2
-  digitalWrite(RELAY3,LOW);//reset relay3
-  digitalWrite(RELAY4,LOW);//reset relay4
-  digitalWrite(RELAY5,LOW);//reset relay5
-  //////////////////////////////
-
-
-  /////// stepper 1 ////////
-  stepper1.setPinsInverted(14,0,1); //dir, step, enable
-  stepper1.setMaxSpeed(stepper1_Speed);
-  stepper1.setEnablePin(step1_ENABLE);
-  stepper1.disableOutputs();
-  
-  pinMode(limitPin1a, INPUT_PULLUP); //arm the pullup for limit pin
-  pinMode(limitPin1b, INPUT_PULLUP); //arm the pullup for limit pin
-
-  /////// stepper 2 ////////
-  stepper2.setPinsInverted(1,0,1); //dir, step, enable
-  stepper2.setMaxSpeed(stepper2_Speed);
-  stepper2.setEnablePin(step2_ENABLE);
-  stepper2.disableOutputs();
-  
-  pinMode(limitPin2a, INPUT_PULLUP); //arm the pullup for limit pin
-
-  ////////////////////////////
-  if(DEBUG)    Serial.begin(115200);
-
-
-  //run steppers until they hits the limit switch   
-  homeStepper1();
-  homeStepper2();  
-
-  /// MIDI ///
-  midiA.setHandleNoteOn(HandleNoteOn);
-  midiA.setHandleNoteOff(HandleNoteOff);
-  midiA.begin(MIDI_CHANNEL_OMNI);   
-}
-
-void loop(){
-  midiA.read();
-  stepper1_action(); 
-  stepper2.run(); // slider stepper 02
-}
-
-////////// STEPPER SEQ ///////////
-
-void homeStepper1(){
-  //run stepper until it hits the limit switch
-  //the while is BLOCKING so we cant use it in main loop
-  if(DEBUG)Serial.println("home_01");
-
-  stepper1.enableOutputs();
-  stepper1.setSpeed(400); //override stepper1 speed, it might be slow
-  while(digitalRead(limitPin1b))
-    stepper1.runSpeed();
-
-  // prime stepper for next action
-  limit_A = 1;
-  stepper1.setSpeed(-400);
-  stepper1.disableOutputs();
-}
-
-void homeStepper2(){
-  //run stepper until it hits the limit switch
-  //the while is BLOCKING so we cant use it in main loop
-  if(DEBUG)Serial.println("home_02");
-
-  stepper2.enableOutputs();
-  stepper2.setCurrentPosition(0);
-  stepper2.setMaxSpeed(1000);
-  stepper2.setAcceleration(10000);
-  stepper2.moveTo(-4000);
-  while(digitalRead(limitPin2a)){
-    stepper2.run();
-  }
-
-  if(DEBUG)Serial.print("steps to home: "); //how many steps did we take to reach home
-  if(DEBUG)Serial.println(stepper2.currentPosition());
-  stepper2.setCurrentPosition(0);
-  stepper2.disableOutputs();
-}
-//////////////////////////////////////
-
-
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
-
- //midiEvent=random(999999); // 
-  
-  // map the midi key (pitch) to a serialize number 
-  // it makes it somewhat easier to add diffrent control 
-  // like IR or analog, but its also a mess to remmber :/
-
-  if(pitch == 83) midikey = 0; //home
-  if(pitch==45) midikey = 1; //strummm
-
-  // mapping solenoids knocks 
-  if(pitch==36) midikey = 14;
-  if(pitch==37) midikey = 15;
-  if(pitch==38) midikey = 16;
-  if(pitch==39) midikey = 17;
-  if(pitch==40) midikey = 18;
-  if(pitch==41) midikey = 19;
-
-
-  //mapping frets , maping starts at 20
-  if(pitch >= 47 && pitch <= 66)
-    midikey = pitch - 27;  
-
-//various velocity changes for fret an strum
-  if(pitch == 72) midikey = 3; //strum speed +
-  if(pitch == 74) midikey = 4; //strum speed -
-  if(pitch == 76) midikey = 5; //slider speed +
-  if(pitch == 77) midikey = 6; //slider speed -
-  if(pitch == 79) midikey = 7; //slider accel +
-  if(pitch == 81) midikey = 8; //slider accel -
-
-
-  if(DEBUG) Serial << "key> " << pitch << "  vel> "<< velocity <<endl;
+  pitchToMidikey(pitch);
+  if(DEBUG) Serial << "ON: key> " << pitch << "  vel> "<< velocity <<endl;
   switchesOn(midikey, velocity);
 }
 
 void HandleNoteOff(byte channel, byte pitch, byte velocity){
-  // this part is DEADLY, needs to ID midi midikey s better
-  // why no unique id for events?
-   switchsOff(midikey, velocity);
+  pitchToMidikey(pitch);
+  if(DEBUG) Serial << "OFF: key> " << pitch << "  vel> "<< velocity <<endl;
+  switchsOff(midikey, velocity);
 }
 
+// map the midi key (pitch) to a serialize number 
+void pitchToMidikey(int I_pitch){
+  //midiEvent=random(999999); // 
+  // it makes it somewhat easier to add diffrent control 
+  // like IR or analog, but its also a mess to remmber :/
+
+  if(I_pitch == 83) midikey = 0; //home
+  if(I_pitch==45) midikey = 1; //strummm
+
+  // mapping solenoids knocks 
+  if(I_pitch==36) midikey = 14;
+  if(I_pitch==37) midikey = 15;
+  if(I_pitch==38) midikey = 16;
+  if(I_pitch==39) midikey = 17;
+  if(I_pitch==40) midikey = 18;
+  if(I_pitch==41) midikey = 19;
+
+  //mapping frets , maping starts at 20
+  if(I_pitch >= 47 && I_pitch <= 66)    midikey = I_pitch - 27;  
+
+  //various velocity changes for fret an strum
+  if(I_pitch == 72) midikey = 3; //strum speed +
+  if(I_pitch == 74) midikey = 4; //strum speed -
+  if(I_pitch == 76) midikey = 5; //slider speed +
+  if(I_pitch == 77) midikey = 6; //slider speed -
+  if(I_pitch == 79) midikey = 7; //slider accel +
+  if(I_pitch == 81) midikey = 8; //slider accel -
+}
 
 void switchsOff(int I_midikey, int I_velocity){
   switch (I_midikey){
@@ -329,8 +216,119 @@ void goStepper2(int i_dest){
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setAcceleration(stepper2_accl);
   //i refer here to two arrays discrbing the same memebers :/
-  stepper2.moveTo(scalePos[i_dest-20]);
+  i_dest = (sizeof(scalePos)/sizeof(int)) - 1;
+  stepper2.moveTo(scalePos[i_dest]);
 }
+
+void homeAll(){
+  stepper1.enableOutputs();
+  stepper2.enableOutputs();
+  //run steppers until they hits the limit switch   
+  homeStepper1();  
+  homeStepper2();  
+}
+
+void sleepAll(){
+  stepper1.disableOutputs();
+  stepper2.disableOutputs();
+  Serial.println("steppers sleep");
+}
+
+void homeStepper1(){
+  //run stepper until it hits the limit switch
+  //the while is BLOCKING so we cant use it in main loop
+  if(DEBUG)Serial.println("home_01");
+
+  stepper1.enableOutputs();
+  stepper1.setSpeed(400); //override stepper1 speed, it might be slow
+  while(digitalRead(limitPin1b))
+    stepper1.runSpeed();
+
+  // prime stepper for next action
+  limit_A = 1;
+  stepper1.setSpeed(-400);
+  stepper1.disableOutputs();
+}
+
+void homeStepper2(){
+  //run stepper until it hits the limit switch
+  //the while is BLOCKING so we cant use it in main loop
+  if(DEBUG)Serial.println("home_02");
+
+  stepper2.enableOutputs();
+  stepper2.setCurrentPosition(0);
+  stepper2.setMaxSpeed(1000);
+  stepper2.setAcceleration(10000);
+  stepper2.moveTo(-4000);
+  while(digitalRead(limitPin2a)){
+    stepper2.run();
+  }
+
+  if(DEBUG)Serial.print("steps to home: "); //how many steps did we take to reach home
+  if(DEBUG)Serial.println(stepper2.currentPosition());
+  stepper2.setCurrentPosition(0);
+  stepper2.disableOutputs();
+}
+
+
+
+void setup(){
+  //// RELAYS //////
+    //Relays (solenoids)
+  pinMode(RELAY0,OUTPUT);//relay0
+  pinMode(RELAY1,OUTPUT);//relay1
+  pinMode(RELAY2,OUTPUT);//relay2
+  pinMode(RELAY3,OUTPUT);//relay3
+  pinMode(RELAY4,OUTPUT);//relay4
+  pinMode(RELAY5,OUTPUT);//relay5
+  digitalWrite(RELAY0,LOW);//reset relay0
+  digitalWrite(RELAY1,LOW);//reset relay1
+  digitalWrite(RELAY2,LOW);//reset relay2
+  digitalWrite(RELAY3,LOW);//reset relay3
+  digitalWrite(RELAY4,LOW);//reset relay4
+  digitalWrite(RELAY5,LOW);//reset relay5
+  //////////////////////////////
+
+
+  /////// stepper 1 ////////
+  stepper1.setPinsInverted(14,0,1); //dir, step, enable
+  stepper1.setMaxSpeed(stepper1_Speed);
+  stepper1.setEnablePin(step1_ENABLE);
+  stepper1.disableOutputs();
+  
+  pinMode(limitPin1a, INPUT_PULLUP); //arm the pullup for limit pin
+  pinMode(limitPin1b, INPUT_PULLUP); //arm the pullup for limit pin
+
+  /////// stepper 2 ////////
+  stepper2.setPinsInverted(1,0,1); //dir, step, enable
+  stepper2.setMaxSpeed(stepper2_Speed);
+  stepper2.setEnablePin(step2_ENABLE);
+  stepper2.disableOutputs();
+  
+  pinMode(limitPin2a, INPUT_PULLUP); //arm the pullup for limit pin
+
+  ////////////////////////////
+  if(DEBUG)    Serial.begin(115200);
+
+
+  //run steppers until they hits the limit switch   
+  homeStepper1();
+  homeStepper2();  
+
+  /// MIDI ///
+  midiA.setHandleNoteOn(HandleNoteOn);
+  midiA.setHandleNoteOff(HandleNoteOff);
+  midiA.begin(MIDI_CHANNEL_OMNI);   
+}
+
+void loop(){
+  midiA.read();
+  stepper1_action(); 
+  stepper2.run(); // slider stepper 02
+}
+
+
+//////////////////////////////////////
 
 
 class UuidClass
