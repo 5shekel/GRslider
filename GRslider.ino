@@ -50,12 +50,6 @@ int scalePos[19] = {
   440, 484, 528, 572, 616, 660, 704, 748, 792};
 ///////////////////////////////
 
-///////////////////////////////
-// how often you want the serial input to be checked.
-int measurementInterval = 50;
-// when the serial input was last checked.
-long lastMeasurementTime = 0L;
-
 int midikey; //see eventclass for more
 
 
@@ -134,9 +128,7 @@ void switchesOn(int I_midikey, int I_velocity){
           //pick all other notes as fret or knocks
             if(I_midikey >= 14 && I_midikey <= 19) digitalWrite(RELAYS[I_midikey-14], HIGH); 
 
-            if(I_midikey >= 20 && I_midikey <= 44){
-              goStepper2(I_midikey);
-            }
+            if(I_midikey >= 20 && I_midikey <= 44) goStepper2(I_midikey);
             break;  
 
           case 0: 
@@ -295,37 +287,3 @@ void loop(){
   stepper1_action(); 
   stepper2.run(); // slider stepper 02
 }
-
-
-//////////////////////////////////////
-
-
-class UuidClass
-{
-  // from TrueRandomClass::memfill
-  public:
-    void memfill(char* location, int size){
-        for (;size--;) *location++ = random(1); //randomByte();
-    };
-
-    void uuid(uint8_t* uuidLocation)
-    {
-      // Generate a Version 4 UUID according to RFC4122
-      memfill((char*)uuidLocation,16);
-
-      // Although the UUID contains 128 bits, only 122 of those are random.
-      // The other 6 bits are fixed, to indicate a version number.
-      uuidLocation[6] = 0x40 | (0x0F & uuidLocation[6]); 
-      uuidLocation[8] = 0x80 | (0x3F & uuidLocation[8]);
-    };
-    //or inside an external void UuidClass::uuid(uint8_t* uuidLocation) {..}
-}; 
-
-
-//we are starting a tiny class for this to manage them better
-//now there is a possibliteventy of giving a note off in a diffrent event. etc.
-class midiEvent
-{
-  public:
-  void gen(uint8_t* event, uint8_t* key, uint8_t* velocity ){};
-};
