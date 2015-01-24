@@ -10,12 +10,21 @@
 #include "midi_Settings.h"
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
 ////////////////////////
+
 #include <AccelStepper.h>
 #include "Streaming.h"
+
+
 //////////////////////////
 //Define Relay pins
-int RELAY[6] = {38,40, 42, 44, 46, 48};
+#define RELAY0  38                        
+#define RELAY1  40                        
+#define RELAY2  42                       
+#define RELAY3  44                        
+#define RELAY4  46
+#define RELAY5  48
 //////////////////////////
+
 
 //STEPPER PROPERTIES
 //////// #1 //////////////
@@ -52,7 +61,7 @@ int measurementInterval = 50;
 // when the serial input was last checked.
 long lastMeasurementTime = 0L;
 
-int action; 
+int midikey; //see eventclass for more
 
 
 void stepper1_action(){
@@ -78,55 +87,80 @@ void stepper1_action(){
 
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
-  pitchToAction(pitch);
+  pitchToMidikey(pitch);
   if(DEBUG) Serial << "ON: key> " << pitch << "  vel> "<< velocity <<endl;
-  switchesOn(action, velocity);
+  switchesOn(midikey, velocity);
 }
 
 void HandleNoteOff(byte channel, byte pitch, byte velocity){
-  pitchToAction(pitch);
+  pitchToMidikey(pitch);
   if(DEBUG) Serial << "OFF: key> " << pitch << "  vel> "<< velocity <<endl;
-  switchsOff(action, velocity);
+  switchsOff(midikey, velocity);
 }
 
 // map the midi key (pitch) to a serialize number 
-void pitchToAction(int I_pitch){
+void pitchToMidikey(int I_pitch){
   //midiEvent=random(999999); // 
   // it makes it somewhat easier to add diffrent control 
   // like IR or analog, but its also a mess to remmber :/
 
-  if(I_pitch == 83) action = 0; //home
-  if(I_pitch==45) action = 1; //strummm
+  if(I_pitch == 83) midikey = 0; //home
+  if(I_pitch==45) midikey = 1; //strummm
 
   // mapping solenoids knocks 
-  if(I_pitch >= RELAY[0] && I_pitch <= RELAY[5])  action = I_pitch - 22;
+  if(I_pitch==36) midikey = 14;
+  if(I_pitch==37) midikey = 15;
+  if(I_pitch==38) midikey = 16;
+  if(I_pitch==39) midikey = 17;
+  if(I_pitch==40) midikey = 18;
+  if(I_pitch==41) midikey = 19;
 
   //mapping frets , maping starts at 20
-  if(I_pitch >= 47 && I_pitch <= 66)    action = I_pitch - 27;  
+  if(I_pitch >= 47 && I_pitch <= 66)    midikey = I_pitch - 27;  
 
   //various velocity changes for fret an strum
-  if(I_pitch == 72) action = 3; //strum speed +
-  if(I_pitch == 74) action = 4; //strum speed -
-  if(I_pitch == 76) action = 5; //slider speed +
-  if(I_pitch == 77) action = 6; //slider speed -
-  if(I_pitch == 79) action = 7; //slider accel +
-  if(I_pitch == 81) action = 8; //slider accel -
+  if(I_pitch == 72) midikey = 3; //strum speed +
+  if(I_pitch == 74) midikey = 4; //strum speed -
+  if(I_pitch == 76) midikey = 5; //slider speed +
+  if(I_pitch == 77) midikey = 6; //slider speed -
+  if(I_pitch == 79) midikey = 7; //slider accel +
+  if(I_pitch == 81) midikey = 8; //slider accel -
 }
 
+void switchsOff(int I_midikey, int I_velocity){
+  switch (I_midikey){
+    case 0:
+      break;
 
-void switchsOff(int I_action, int I_velocity){
+    default:
        //pick all other notes as knocks
-       if(I_action >= 14 && I_action <= 19) digitalWrite(RELAY[action-14], LOW);
-
+        if(I_midikey==14) digitalWrite(RELAY0, LOW); //turn off relay0  
+        if(I_midikey==15) digitalWrite(RELAY1, LOW); //turn off relay1
+        if(I_midikey==16) digitalWrite(RELAY2, LOW); //turn off relay2
+        if(I_midikey==17) digitalWrite(RELAY3, LOW); //turn off relay3
+        if(I_midikey==18) digitalWrite(RELAY4, LOW); //turn off relay4
+        if(I_midikey==19) digitalWrite(RELAY5, LOW); //turn off relay5  
+      break;
+  }
 }
 
-void switchesOn(int I_action, int I_velocity){
+void switchesOn(int I_midikey, int I_velocity){
   //general switch function, this works with both MIDI and IR
-  //pick all other notes as fret or knocks
-  if(I_action >= 14 && I_action <= 19) digitalWrite(RELAY[action-14], HIGH);
-  if(I_action >= 20 && I_action <= 44) goStepper2(I_action);
+      switch (I_midikey) {
+            default: 
+          //pick all other notes as fret or knocks
+            if(I_midikey==14) digitalWrite(RELAY0, HIGH); //turn on relay0
+            if(I_midikey==15) digitalWrite(RELAY1, HIGH); //turn on relay1
+            if(I_midikey==16) digitalWrite(RELAY2, HIGH); //turn on relay2
+            if(I_midikey==17) digitalWrite(RELAY3, HIGH); //turn on relay3
+            if(I_midikey==18) digitalWrite(RELAY4, HIGH); //turn on relay4
+            if(I_midikey==19) digitalWrite(RELAY5, HIGH); //turn on relay5 
 
-      switch (I_action) {
+            if(I_midikey >= 20 && I_midikey <= 44){
+              goStepper2(I_midikey);
+            }
+            break;  
+
           case 0: 
             homeAll();
             if(DEBUG) Serial<<"homeAll"<<endl;
@@ -139,6 +173,7 @@ void switchesOn(int I_action, int I_velocity){
             break;
           
           case 2:
+
             break; 
           
           case 3: 
@@ -240,10 +275,18 @@ void homeStepper2(){
 void setup(){
   //// RELAYS //////
     //Relays (solenoids)
-    for(int iii=0; iii<=6; iii++){
-      pinMode(RELAY[iii], OUTPUT);
-      digitalWrite(RELAY[iii], LOW);
-    }
+  pinMode(RELAY0,OUTPUT);//relay0
+  pinMode(RELAY1,OUTPUT);//relay1
+  pinMode(RELAY2,OUTPUT);//relay2
+  pinMode(RELAY3,OUTPUT);//relay3
+  pinMode(RELAY4,OUTPUT);//relay4
+  pinMode(RELAY5,OUTPUT);//relay5
+  digitalWrite(RELAY0,LOW);//reset relay0
+  digitalWrite(RELAY1,LOW);//reset relay1
+  digitalWrite(RELAY2,LOW);//reset relay2
+  digitalWrite(RELAY3,LOW);//reset relay3
+  digitalWrite(RELAY4,LOW);//reset relay4
+  digitalWrite(RELAY5,LOW);//reset relay5
   //////////////////////////////
 
 
