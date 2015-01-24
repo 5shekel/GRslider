@@ -50,7 +50,7 @@ int scalePos[19] = {
   440, 484, 528, 572, 616, 660, 704, 748, 792};
 ///////////////////////////////
 
-int midikey; //see eventclass for more
+int action; //see eventclass for more
 
 
 void stepper1_action(){
@@ -76,57 +76,57 @@ void stepper1_action(){
 
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
-  pitchToMidikey(pitch);
-  if(DEBUG) Serial << "ON: pitch/midikey/val> " << pitch << " / "<< midikey << " / "<< velocity <<endl;
-  if(midikey!= 99) switchesOn(midikey, velocity);
+  pitchToaction(pitch);
+  if(DEBUG) Serial << "ON: pitch/action/val> " << pitch << " / "<< action << " / "<< velocity <<endl;
+  if(action!= 99) switchesOn(action, velocity);
 }
 
 void HandleNoteOff(byte channel, byte pitch, byte velocity){
-  pitchToMidikey(pitch);
-  if(DEBUG) Serial << "OFF: pitch/midikey/val> " << pitch << " / "<< midikey << " / "<< velocity <<endl;
-  if(midikey!= 99) switchsOff(midikey, velocity);
+  pitchToaction(pitch);
+  //if(DEBUG) Serial << "OFF: pitch/action/val> " << pitch << " / "<< action << " / "<< velocity <<endl;
+  if(action!= 99) switchsOff(action, velocity);
 }
 
 // map the midi key (pitch) to a serialize number 
-void pitchToMidikey(int I_pitch){
-  if(I_pitch == 83) midikey = 0; //home
-  if(I_pitch==45) midikey = 1; //strummm
+void pitchToaction(int I_pitch){
+  if(I_pitch == 83) action = 0; //home
+  if(I_pitch==45) action = 1; //strummm
 
   // mapping solenoids knocks 
-  if(I_pitch==36) midikey = 14;
-  if(I_pitch==37) midikey = 15;
-  if(I_pitch==38) midikey = 16;
-  if(I_pitch==39) midikey = 17;
-  if(I_pitch==40) midikey = 18;
-  if(I_pitch==41) midikey = 19;
+  if(I_pitch==36) action = 14;
+  if(I_pitch==37) action = 15;
+  if(I_pitch==38) action = 16;
+  if(I_pitch==39) action = 17;
+  if(I_pitch==40) action = 18;
+  if(I_pitch==41) action = 19;
 
   //mapping frets , maping starts at 20
-  if(I_pitch >= 47 && I_pitch <= 66)    midikey = I_pitch - 27;  
+  if(I_pitch >= 47 && I_pitch <= 65)    action = I_pitch - 27;  
 
   //various velocity changes for fret an strum
-  if(I_pitch == 72) midikey = 3; //strum speed +
-  if(I_pitch == 74) midikey = 4; //strum speed -
-  if(I_pitch == 76) midikey = 5; //slider speed +
-  if(I_pitch == 77) midikey = 6; //slider speed -
-  if(I_pitch == 79) midikey = 7; //slider accel +
-  if(I_pitch == 81) midikey = 8; //slider accel -
+  if(I_pitch == 72) action = 3; //strum speed +
+  if(I_pitch == 74) action = 4; //strum speed -
+  if(I_pitch == 76) action = 5; //slider speed +
+  if(I_pitch == 77) action = 6; //slider speed -
+  if(I_pitch == 79) action = 7; //slider accel +
+  if(I_pitch == 81) action = 8; //slider accel -
 }
 
-void switchsOff(int I_midikey, int I_velocity){
-  midikey = 99; //reset key
+void switchsOff(int I_action, int I_velocity){
+  action = 99; //reset key
   //pick all other notes as knocks
-  if(I_midikey >= 14 && I_midikey <= 19) digitalWrite(RELAYS[I_midikey-14], LOW);
+  if(I_action >= 14 && I_action <= 19) digitalWrite(RELAYS[I_action-14], LOW);
 }
 
-void switchesOn(int I_midikey, int I_velocity){
-  midikey = 99; //reset key
+void switchesOn(int I_action, int I_velocity){
+  action = 99; //reset key
   //general switch function, this works with both MIDI and IR
-      switch (I_midikey) {
+      switch (I_action) {
             default: 
           //pick all other notes as fret or knocks
-            if(I_midikey >= 14 && I_midikey <= 19) digitalWrite(RELAYS[I_midikey-14], HIGH); 
+            if(I_action >= 14 && I_action <= 19) digitalWrite(RELAYS[I_action-14], HIGH); 
 
-            if(I_midikey >= 20 && I_midikey <= 44) goStepper2(I_midikey);
+            if(I_action >= 20 && I_action <= 44) goStepper2(I_action);
             break;  
 
           case 0: 
@@ -184,8 +184,10 @@ void goStepper2(int i_dest){
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setAcceleration(stepper2_accl);
   //i refer here to two arrays discrbing the same memebers :/
-  i_dest = (sizeof(scalePos)/sizeof(int)) - 1;
-  stepper2.moveTo(scalePos[i_dest]);
+  //i_dest = (sizeof(scalePos)/sizeof(int)) - 1;
+  int tempDest = i_dest - 20;
+  Serial<<"idest/tempdest>"<<i_dest<<"/"<<tempDest<<endl;
+  stepper2.moveTo(scalePos[tempDest]);
 }
 
 void homeAll(){
