@@ -77,22 +77,18 @@ void stepper1_action(){
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
   pitchToMidikey(pitch);
-  if(DEBUG) Serial << "ON: key> " << pitch << "  vel> "<< velocity <<endl;
-  switchesOn(midikey, velocity);
+  if(DEBUG) Serial << "ON: pitch/midikey/val> " << pitch << " / "<< midikey << " / "<< velocity <<endl;
+  if(midikey!= 99) switchesOn(midikey, velocity);
 }
 
 void HandleNoteOff(byte channel, byte pitch, byte velocity){
   pitchToMidikey(pitch);
-  if(DEBUG) Serial << "OFF: key> " << pitch << "  vel> "<< velocity <<endl;
-  switchsOff(midikey, velocity);
+  if(DEBUG) Serial << "OFF: pitch/midikey/val> " << pitch << " / "<< midikey << " / "<< velocity <<endl;
+  if(midikey!= 99) switchsOff(midikey, velocity);
 }
 
 // map the midi key (pitch) to a serialize number 
 void pitchToMidikey(int I_pitch){
-  //midiEvent=random(999999); // 
-  // it makes it somewhat easier to add diffrent control 
-  // like IR or analog, but its also a mess to remmber :/
-
   if(I_pitch == 83) midikey = 0; //home
   if(I_pitch==45) midikey = 1; //strummm
 
@@ -117,11 +113,13 @@ void pitchToMidikey(int I_pitch){
 }
 
 void switchsOff(int I_midikey, int I_velocity){
-       //pick all other notes as knocks
-       if(I_midikey >= 14 && I_midikey <= 19) digitalWrite(RELAYS[I_midikey-14], LOW);
+  midikey = 99; //reset key
+  //pick all other notes as knocks
+  if(I_midikey >= 14 && I_midikey <= 19) digitalWrite(RELAYS[I_midikey-14], LOW);
 }
 
 void switchesOn(int I_midikey, int I_velocity){
+  midikey = 99; //reset key
   //general switch function, this works with both MIDI and IR
       switch (I_midikey) {
             default: 
