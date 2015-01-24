@@ -17,12 +17,7 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
 
 //////////////////////////
 //Define Relay pins
-#define RELAY0  38                        
-#define RELAY1  40                        
-#define RELAY2  42                       
-#define RELAY3  44                        
-#define RELAY4  46
-#define RELAY5  48
+int RELAYS[6] = {38,40,42,44,46,48};
 //////////////////////////
 
 
@@ -128,20 +123,8 @@ void pitchToMidikey(int I_pitch){
 }
 
 void switchsOff(int I_midikey, int I_velocity){
-  switch (I_midikey){
-    case 0:
-      break;
-
-    default:
        //pick all other notes as knocks
-        if(I_midikey==14) digitalWrite(RELAY0, LOW); //turn off relay0  
-        if(I_midikey==15) digitalWrite(RELAY1, LOW); //turn off relay1
-        if(I_midikey==16) digitalWrite(RELAY2, LOW); //turn off relay2
-        if(I_midikey==17) digitalWrite(RELAY3, LOW); //turn off relay3
-        if(I_midikey==18) digitalWrite(RELAY4, LOW); //turn off relay4
-        if(I_midikey==19) digitalWrite(RELAY5, LOW); //turn off relay5  
-      break;
-  }
+       if(I_midikey >= 14 && I_midikey <= 19) digitalWrite(RELAYS[I_midikey-14], LOW);
 }
 
 void switchesOn(int I_midikey, int I_velocity){
@@ -149,12 +132,7 @@ void switchesOn(int I_midikey, int I_velocity){
       switch (I_midikey) {
             default: 
           //pick all other notes as fret or knocks
-            if(I_midikey==14) digitalWrite(RELAY0, HIGH); //turn on relay0
-            if(I_midikey==15) digitalWrite(RELAY1, HIGH); //turn on relay1
-            if(I_midikey==16) digitalWrite(RELAY2, HIGH); //turn on relay2
-            if(I_midikey==17) digitalWrite(RELAY3, HIGH); //turn on relay3
-            if(I_midikey==18) digitalWrite(RELAY4, HIGH); //turn on relay4
-            if(I_midikey==19) digitalWrite(RELAY5, HIGH); //turn on relay5 
+            if(I_midikey >= 14 && I_midikey <= 19) digitalWrite(RELAYS[I_midikey-14], HIGH); 
 
             if(I_midikey >= 20 && I_midikey <= 44){
               goStepper2(I_midikey);
@@ -275,19 +253,10 @@ void homeStepper2(){
 void setup(){
   //// RELAYS //////
     //Relays (solenoids)
-  pinMode(RELAY0,OUTPUT);//relay0
-  pinMode(RELAY1,OUTPUT);//relay1
-  pinMode(RELAY2,OUTPUT);//relay2
-  pinMode(RELAY3,OUTPUT);//relay3
-  pinMode(RELAY4,OUTPUT);//relay4
-  pinMode(RELAY5,OUTPUT);//relay5
-  digitalWrite(RELAY0,LOW);//reset relay0
-  digitalWrite(RELAY1,LOW);//reset relay1
-  digitalWrite(RELAY2,LOW);//reset relay2
-  digitalWrite(RELAY3,LOW);//reset relay3
-  digitalWrite(RELAY4,LOW);//reset relay4
-  digitalWrite(RELAY5,LOW);//reset relay5
-  //////////////////////////////
+    for(int iii=0;iii<=6;iii++){
+      pinMode(RELAYS[iii], OUTPUT);
+      digitalWrite(RELAYS[iii], LOW);
+    }
 
 
   /////// stepper 1 ////////
