@@ -17,13 +17,17 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
 
 //////////////////////////
 //Define Relay pins
-int RELAYS[6] = {38,40,42,44,46,48};
+int RELAYS[6] = {
+  38,40,42,44,46,48};
 //////////////////////////
-
 
 //STEPPER PROPERTIES
 //////// #1 //////////////
 int stepper1_Speed = 400;
+// micro stepping pin for fret (stepper 1)
+int MS1_pin = 24;
+int MS2_pin = 26;
+int MS3_pin = 28;
 
 #define limitPin1a 5
 #define limitPin1b 4
@@ -113,69 +117,76 @@ void pitchToaction(int I_pitch){
 }
 
 void switchsOff(int I_action, int I_velocity){
-  action = 99; //reset key
   //pick all other notes as knocks
   if(I_action >= 14 && I_action <= 19) digitalWrite(RELAYS[I_action-14], LOW);
+  action = 99; //reset key
 }
 
 void switchesOn(int I_action, int I_velocity){
-  action = 99; //reset key
-  //general switch function, this works with both MIDI and IR
-      switch (I_action) {
-            default: 
-          //pick all other notes as fret or knocks
-            if(I_action >= 14 && I_action <= 19) digitalWrite(RELAYS[I_action-14], HIGH); 
+  switch (I_action) {
+  default: 
+    //pick all other notes as fret or knocks
+    if(I_action >= 14 && I_action <= 19) digitalWrite(RELAYS[I_action-14], HIGH); 
+    if(I_action >= 20 && I_action <= 44) goStepper2(I_action);
+    break;  
 
-            if(I_action >= 20 && I_action <= 44) goStepper2(I_action);
-            break;  
+  case 0: 
+    homeAll();
+    if(DEBUG) Serial<<"homeAll"<<endl;
+    break; 
 
-          case 0: 
-            homeAll();
-            if(DEBUG) Serial<<"homeAll"<<endl;
-            break; 
-          
-          case 1: 
-            stepper1.enableOutputs();
-            stepperMove = 1;
-            if(DEBUG) Serial<<"stepper1_action"<<endl;
-            break;
-          
-          case 2:
+  case 1: 
+    stepper1.enableOutputs();
+    stepperMove = 1;
+    if(DEBUG) Serial<<"stepper1_action"<<endl;
+    break;
 
-            break; 
-          
-          case 3: 
-            stepper1_Speed += 50;
-            if(DEBUG) Serial<<"current speed 1: "<<stepper1_Speed<<endl;
-            break; 
-          
-          case 4: 
-            stepper1_Speed -= 50;
-            if(DEBUG) Serial<<"current speed 1: "<<stepper1_Speed<<endl;
-            break;
-          
-          case 5: 
-            stepper2_Speed += 100;
-            if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
-            break; 
-          
-          case 6: 
-            stepper2_Speed -= 100;
-            if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
-            break;   
+  case 2:
 
-          case 7: 
-            stepper2_accl += 100;
-            if(DEBUG) Serial<<"current accel 2: "<<stepper2_accl<<endl;
-            break; 
-          
-          case 8: 
-            stepper2_accl -= 100;
-            if(DEBUG) Serial<<"current accel 2: "<<stepper2_accl<<endl;
-            break; 
+    break; 
+
+  case 3: 
+    stepper1_Speed_change(5);
+    break; 
+
+  case 4: 
+    stepper1_Speed_change(-5);
+    break;
+
+  case 5: 
+    stepper2_Speed_change(50);
+    break; 
+
+  case 6: 
+    stepper2_Speed_change(-50);
+
+    break;   
+
+  case 7: 
+    stepper2_Accel_change(100);
+    break; 
+
+  case 8: 
+    stepper2_Accel_change(-100);
+    break; 
   } 
+  action = 99; //reset key
 }
 
+void stepper1_Speed_change(int I_stpspd){
+  if(stepper1_Speed > 0) stepper1_Speed = stepper1_Speed + I_stpspd;
+  if(DEBUG) Serial<<"current speed 1: "<<stepper1_Speed<<endl;
+}
+
+void stepper2_Speed_change(int I_stpspd2){
+  if(stepper2_Speed > 0) stepper2_Speed = stepper2_Speed + I_stpspd2;
+  if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
+}
+
+void stepper2_Accel_change(int I_stpacl2){
+  if(stepper2_accl > 0) stepper2_accl = stepper2_accl + I_stpacl2;
+  if(DEBUG) Serial<<"current accel 2: "<<stepper2_accl<<endl;
+}
 
 void goStepper2(int i_dest){
   //takes the various cntrols for the slider stepper2
@@ -186,7 +197,7 @@ void goStepper2(int i_dest){
   //i refer here to two arrays discrbing the same memebers :/
   //i_dest = (sizeof(scalePos)/sizeof(int)) - 1;
   int tempDest = i_dest - 20;
-  Serial<<"idest/tempdest>"<<i_dest<<"/"<<tempDest<<endl;
+  //Serial<<"idest/tempdest>"<<i_dest<<"/"<<tempDest<<endl;
   stepper2.moveTo(scalePos[tempDest]);
 }
 
@@ -244,11 +255,11 @@ void homeStepper2(){
 
 void setup(){
   //// RELAYS //////
-    //Relays (solenoids)
-    for(int iii=0;iii<=6;iii++){
-      pinMode(RELAYS[iii], OUTPUT);
-      digitalWrite(RELAYS[iii], LOW);
-    }
+  //Relays (solenoids)
+  for(int iii=0;iii<=6;iii++){
+    pinMode(RELAYS[iii], OUTPUT);
+    digitalWrite(RELAYS[iii], LOW);
+  }
 
 
   /////// stepper 1 ////////
@@ -256,16 +267,23 @@ void setup(){
   stepper1.setMaxSpeed(stepper1_Speed);
   stepper1.setEnablePin(step1_ENABLE);
   stepper1.disableOutputs();
-  
+
   pinMode(limitPin1a, INPUT_PULLUP); //arm the pullup for limit pin
   pinMode(limitPin1b, INPUT_PULLUP); //arm the pullup for limit pin
+
+  pinMode(MS1_pin, OUTPUT);
+  digitalWrite(MS1_pin, LOW);
+  pinMode(MS2_pin, OUTPUT);
+  digitalWrite(MS2_pin, LOW);
+  pinMode(MS3_pin, OUTPUT);
+  digitalWrite(MS3_pin, LOW);
 
   /////// stepper 2 ////////
   stepper2.setPinsInverted(1,0,1); //dir, step, enable
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setEnablePin(step2_ENABLE);
   stepper2.disableOutputs();
-  
+
   pinMode(limitPin2a, INPUT_PULLUP); //arm the pullup for limit pin
 
   ////////////////////////////
@@ -286,4 +304,9 @@ void loop(){
   midiA.read();
   stepper1_action(); 
   stepper2.run(); // slider stepper 02
+  if(stepper2.distanceToGo()==0) stepper2.disableOutputs(); 
 }
+
+
+
+
