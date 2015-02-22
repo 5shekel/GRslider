@@ -74,40 +74,36 @@ void stepper1_action(){
 }
 
 void handlePitchWheel(byte channel, int bend){
-
-  stepper2.enableOutputs();
-  stepper2.setMaxSpeed(stepper2_Speed); //as fast
-  stepper2.setAcceleration(stepper2_accl); //not sure we need
-  /*  The two bytes of the pitch bend message form a 14 bit 
-  number, 0 to 16383. The value 8192 (sent, LSB first, as
-  0x00 0x40), is centered, or "no pitch bend." The value 0
-  (0x00 0x00) means, "bend as low as possible," and, 
-  similarly, 16383 (0x7F 0x7F) is to "bend as high as 
-  possible." The exact range of the pitch bend is specific 
-  to the synthesizer.  
-  the pitchbend is done in the arduino Midi library. "Bend" is a int value between -8192 .. 8192. "0" is the middle --> no change in pitch
-   */
-  int iPos = map(bend, -8192, 8192, 0, 792);  
-  if(DEBUG) Serial << "channel, bend, iPos " << channel << " / "<< bend << " / "<< iPos <<endl;
+  bend = constrain(bend, 0, 8192); // "Bend" is a int value between -8192 .. 8192. "0" is the middle --> no change in pitch
+  int iPos = map(bend, 0, 8192, 0, 792);  
   stepper2.moveTo(iPos);
+  stepper2.setSpeed(stepper2_Speed);
+
+  if(DEBUG) Serial << "channel, bend, iPos " << channel << " / "<< bend << " / "<< iPos <<endl;
 }
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
-  pitchToaction(pitch);
+  pitchToaction(pitch, velocity);
+  if(action!= 99) switchesOn(action);
+  
   if(DEBUG) Serial << "ON: pitch/action/val> " << pitch << " / "<< action << " / "<< velocity <<endl;
-  if(action!= 99) switchesOn(action, velocity);
 }
 
 void HandleNoteOff(byte channel, byte pitch, byte velocity){
-  pitchToaction(pitch);
+  pitchToaction(pitch, velocity);
   //if(DEBUG) Serial << "OFF: pitch/action/val> " << pitch << " / "<< action << " / "<< velocity <<endl;
-  if(action!= 99) switchsOff(action, velocity);
+  if(action!= 99) switchsOff(action);
 }
 
 // map the midi key (pitch) to a serialize number 
-void pitchToaction(int I_pitch){
+void pitchToaction(int I_pitch, int I_velocity){
   if(I_pitch == 83) action = 0; //home
-  if(I_pitch==45) action = 1; //strummm
+
+  if(I_pitch==45) { //strummm stepper 1
+      stepper1.enableOutputs();
+      stepper1_Speed = map(I_velocity, 0, 127, 50, 4000); //needs to check range
+      stepperMove = 1; //see stepper1_action at loop()
+    }
 
   // mapping solenoids knocks 
   if(I_pitch==36) action = 14;
@@ -126,17 +122,15 @@ void pitchToaction(int I_pitch){
   if(I_pitch == 74) action = 4; //strum speed -
   if(I_pitch == 76) action = 5; //slider speed +
   if(I_pitch == 77) action = 6; //slider speed -
-  if(I_pitch == 79) action = 7; //slider accel +
-  if(I_pitch == 81) action = 8; //slider accel -
 }
 
-void switchsOff(int I_action, int I_velocity){
+void switchsOff(int I_action){
   //pick all other notes as knocks
   if(I_action >= 14 && I_action <= 19) digitalWrite(RELAYS[I_action-14], LOW);
   action = 99; //reset key
 }
 
-void switchesOn(int I_action, int I_velocity){
+void switchesOn(int I_action){
   switch (I_action) {
   default: 
     //pick all other notes as fret or knocks
@@ -149,9 +143,7 @@ void switchesOn(int I_action, int I_velocity){
     break; 
 
   case 1: 
-    stepper1.enableOutputs();
-    stepperMove = 1;
-    if(DEBUG) Serial<<"stepper1_action"<<endl;
+
     break;
 
   case 2:
@@ -174,14 +166,6 @@ void switchesOn(int I_action, int I_velocity){
     stepper2_Speed_change(-50);
 
     break;   
-
-  case 7: 
-    stepper2_Accel_change(100);
-    break; 
-
-  case 8: 
-    stepper2_Accel_change(-100);
-    break; 
   } 
   action = 99; //reset key
 }
@@ -195,12 +179,6 @@ void stepper2_Speed_change(int I_stpspd2){
   if(stepper2_Speed > 0) stepper2_Speed = stepper2_Speed + I_stpspd2;
   if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
 }
-
-void stepper2_Accel_change(int I_stpacl2){
-  if(stepper2_accl > 0) stepper2_accl = stepper2_accl + I_stpacl2;
-  if(DEBUG) Serial<<"current accel 2: "<<stepper2_accl<<endl;
-}
-
 
 void homeAll(){
   stepper1.enableOutputs();
@@ -250,12 +228,7 @@ void homeStepper2(){
   if(DEBUG)Serial.println(stepper2.currentPosition());
   stepper2.setCurrentPosition(0);
 
-  stepper2.moveTo(396); //move to middle
-  while(digitalRead(limitPin2a)){
-    stepper2.run();
-  }
-
-  stepper2.disableOutputs();
+  //stepper2.disableOutputs();
 }
 
 
@@ -289,7 +262,7 @@ void setup(){
   stepper2.setPinsInverted(1,0,1); //dir, step, enable
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setEnablePin(step2_ENABLE);
-  stepper2.disableOutputs();
+  stepper2.enableOutputs();
 
   pinMode(limitPin2a, INPUT_PULLUP); //arm the pullup for limit pin
 
@@ -311,7 +284,7 @@ void setup(){
 void loop(){
   midiA.read();
   stepper1_action(); 
-  stepper2.run(); // slider stepper 02
+  stepper2.runSpeedToPosition(); //see pitchWheel handle
   if(stepper2.distanceToGo()==0) stepper2.disableOutputs(); 
 }
 
