@@ -78,6 +78,22 @@ void stepper1_action(){
   }
 }
 
+void handlePitchWheel(byte channel, int bend){
+
+  stepper2.enableOutputs();
+  stepper2.setMaxSpeed(stepper2_Speed); //as fast
+  stepper2.setAcceleration(stepper2_accl); //not sure we need
+  /*  The two bytes of the pitch bend message form a 14 bit 
+  number, 0 to 16383. The value 8192 (sent, LSB first, as
+  0x00 0x40), is centered, or "no pitch bend." The value 0
+  (0x00 0x00) means, "bend as low as possible," and, 
+  similarly, 16383 (0x7F 0x7F) is to "bend as high as 
+  possible." The exact range of the pitch bend is specific 
+  to the synthesizer.   */
+  int iPos = map(bend, 0, 16383, 0, 792);  
+  if(DEBUG) Serial << "channel, bend, iPos " << channel << " / "<< bend << " / "<< iPos <<endl;
+  stepper2.moveTo(iPos);
+}
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
   pitchToaction(pitch);
@@ -104,8 +120,9 @@ void pitchToaction(int I_pitch){
   if(I_pitch==40) action = 18;
   if(I_pitch==41) action = 19;
 
+
   //mapping frets , maping starts at 20
-  if(I_pitch >= 47 && I_pitch <= 65)    action = I_pitch - 27;  
+  //if(I_pitch >= 47 && I_pitch <= 65)    action = I_pitch - 27;  
 
   //various velocity changes for fret an strum
   if(I_pitch == 72) action = 3; //strum speed +
@@ -127,7 +144,6 @@ void switchesOn(int I_action, int I_velocity){
   default: 
     //pick all other notes as fret or knocks
     if(I_action >= 14 && I_action <= 19) digitalWrite(RELAYS[I_action-14], HIGH); 
-    if(I_action >= 20 && I_action <= 44) goStepper2(I_action);
     break;  
 
   case 0: 
@@ -188,18 +204,6 @@ void stepper2_Accel_change(int I_stpacl2){
   if(DEBUG) Serial<<"current accel 2: "<<stepper2_accl<<endl;
 }
 
-void goStepper2(int i_dest){
-  //takes the various cntrols for the slider stepper2
-  // and starts to moves the stepper
-  stepper2.enableOutputs();
-  stepper2.setMaxSpeed(stepper2_Speed);
-  stepper2.setAcceleration(stepper2_accl);
-  //i refer here to two arrays discrbing the same memebers :/
-  //i_dest = (sizeof(scalePos)/sizeof(int)) - 1;
-  int tempDest = i_dest - 20;
-  //Serial<<"idest/tempdest>"<<i_dest<<"/"<<tempDest<<endl;
-  stepper2.moveTo(scalePos[tempDest]);
-}
 
 void homeAll(){
   stepper1.enableOutputs();
@@ -297,6 +301,7 @@ void setup(){
   /// MIDI ///
   midiA.setHandleNoteOn(HandleNoteOn);
   midiA.setHandleNoteOff(HandleNoteOff);
+  midiA.setHandlePitchBend(handlePitchWheel);
   midiA.begin(MIDI_CHANNEL_OMNI);   
 }
 
