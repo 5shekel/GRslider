@@ -49,11 +49,6 @@ int stepper2_accl = 4500;
 #define step2_ENABLE 12
 AccelStepper stepper2(1, step2_STEP, step2_DIR); //step / dir
 
-int scalePos[19] = {
-  0, 44, 88, 132, 176, 220, 264, 308, 352, 396, 
-  440, 484, 528, 572, 616, 660, 704, 748, 792};
-///////////////////////////////
-
 int action; //see eventclass for more
 
 
@@ -252,6 +247,12 @@ void homeStepper2(){
   if(DEBUG)Serial.print("steps to home: "); //how many steps did we take to reach home
   if(DEBUG)Serial.println(stepper2.currentPosition());
   stepper2.setCurrentPosition(0);
+
+  stepper2.moveTo(396); //move to middle
+  while(digitalRead(limitPin2a)){
+    stepper2.run();
+  }
+  
   stepper2.disableOutputs();
 }
 
