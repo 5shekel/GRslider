@@ -48,7 +48,7 @@ int stepper2_accl = 4500;
 #define step2_DIR 11
 #define step2_ENABLE 12
 AccelStepper stepper2(1, step2_STEP, step2_DIR); //step / dir
-
+int slidePos;
 int action; //see eventclass for more
 
 
@@ -73,14 +73,6 @@ void stepper1_action(){
   }
 }
 
-void handlePitchWheel(byte channel, int bend){
-  bend = constrain(bend, 0, 8192); // "Bend" is a int value between -8192 .. 8192. "0" is the middle --> no change in pitch
-  int iPos = map(bend, 0, 8192, 0, 792);  
-  stepper2.moveTo(iPos);
-  stepper2.setSpeed(stepper2_Speed);
-
-  if(DEBUG) Serial << "channel, bend, iPos " << channel << " / "<< bend << " / "<< iPos <<endl;
-}
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
   pitchToaction(pitch, velocity);
@@ -217,8 +209,8 @@ void homeStepper2(){
 
   stepper2.enableOutputs();
   stepper2.setCurrentPosition(0);
-  stepper2.setMaxSpeed(1000);
-  stepper2.setAcceleration(10000);
+  stepper2.setMaxSpeed(stepper2_Speed);
+  stepper2.setAcceleration(stepper2_Speed-100);
   stepper2.moveTo(-4000);
   while(digitalRead(limitPin2a)){
     stepper2.run();
@@ -260,8 +252,11 @@ void setup(){
 
   /////// stepper 2 ////////
   stepper2.setPinsInverted(1,0,1); //dir, step, enable
-  stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setEnablePin(step2_ENABLE);
+
+  stepper2.setMaxSpeed(stepper2_Speed);
+  stepper2.setAcceleration(stepper2_Speed - 100);
+  
   stepper2.enableOutputs();
 
   pinMode(limitPin2a, INPUT_PULLUP); //arm the pullup for limit pin
@@ -277,17 +272,27 @@ void setup(){
   /// MIDI ///
   midiA.setHandleNoteOn(HandleNoteOn);
   midiA.setHandleNoteOff(HandleNoteOff);
-  midiA.setHandlePitchBend(handlePitchWheel);
+  //midiA.setHandlePitchBend(handlePitchWheel);
+  midiA.setHandleControlChange(handleModWheel);
+
   midiA.begin(MIDI_CHANNEL_OMNI);   
 }
 
 void loop(){
   midiA.read();
   stepper1_action(); 
-  stepper2.runSpeedToPosition(); //see pitchWheel handle
-  if(stepper2.distanceToGo()==0) stepper2.disableOutputs(); 
+
+  stepper2.run();
+
+  //if(digitalRead(limitPin2a)) stepper2.setCurrentPosition(0);
+  //if(stepper2.distanceToGo()==0) stepper2.disableOutputs(); 
 }
 
-
+void handleModWheel(byte channel, byte number, byte value){
+  stepper2.enableOutputs(); 
+  slidePos = map(value, 0, 127, 792, 0);
+  stepper2.moveTo(slidePos);
+  if(DEBUG) Serial << "channel, value, slidePos " << channel << " / "<< value << " / "<< slidePos <<endl;
+}
 
 
