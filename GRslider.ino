@@ -84,8 +84,10 @@ void handlePitchWheel(byte channel, int bend){
   (0x00 0x00) means, "bend as low as possible," and, 
   similarly, 16383 (0x7F 0x7F) is to "bend as high as 
   possible." The exact range of the pitch bend is specific 
-  to the synthesizer.   */
-  int iPos = map(bend, 0, 16383, 0, 792);  
+  to the synthesizer.  
+  the pitchbend is done in the arduino Midi library. "Bend" is a int value between -8192 .. 8192. "0" is the middle --> no change in pitch
+   */
+  int iPos = map(bend, -8192, 8192, 0, 792);  
   if(DEBUG) Serial << "channel, bend, iPos " << channel << " / "<< bend << " / "<< iPos <<endl;
   stepper2.moveTo(iPos);
 }
@@ -252,7 +254,7 @@ void homeStepper2(){
   while(digitalRead(limitPin2a)){
     stepper2.run();
   }
-  
+
   stepper2.disableOutputs();
 }
 
