@@ -18,16 +18,12 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial3, midiA);
 //////////////////////////
 //Define Relay pins
 int RELAYS[6] = {
-  38,40,42,44,46,48};
+  38,40,42,48,46,44};
 //////////////////////////
 
 //STEPPER PROPERTIES
 //////// #1 //////////////
 int stepper1_Speed = 400;
-// micro stepping pin for fret (stepper 1)
-int MS1_pin = 24;
-int MS2_pin = 26;
-int MS3_pin = 28;
 
 #define limitPin1a 5
 #define limitPin1b 4
@@ -64,14 +60,12 @@ void stepper1_action(){
     {
       limit_A = 2;
       stepperMove = false;
-      stepper1.setSpeed(stepper1_Speed);
       stepper1.disableOutputs();
     }
     else if(!digitalRead(limitPin1b) && limit_A==2)
     {
       limit_A = 1;
       stepperMove = false;
-      stepper1.setSpeed(-stepper1_Speed);
       stepper1.disableOutputs();
     }
     stepper1.runSpeed();
@@ -80,21 +74,33 @@ void stepper1_action(){
 
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
-  pitchToaction(pitch);
+  //stepper1 is here
+  if(pitch==45){
+    stepper1.enableOutputs();
+    stepper1_Speed = map(velocity, 0, 127, 70, 450);
+
+    if(limit_A == 1){
+            stepper1.setSpeed(-stepper1_Speed);
+    }else{
+            stepper1.setSpeed(stepper1_Speed);
+    }
+    stepperMove = 1;
+    }
+
+  pitchToaction(pitch, velocity);
   if(DEBUG) Serial << "ON: pitch/action/val> " << pitch << " / "<< action << " / "<< velocity <<endl;
+
   if(action!= 99) switchesOn(action, velocity);
 }
 
 void HandleNoteOff(byte channel, byte pitch, byte velocity){
-  pitchToaction(pitch);
-  //if(DEBUG) Serial << "OFF: pitch/action/val> " << pitch << " / "<< action << " / "<< velocity <<endl;
+  pitchToaction(pitch, velocity);
   if(action!= 99) switchsOff(action, velocity);
 }
 
 // map the midi key (pitch) to a serialize number 
-void pitchToaction(int I_pitch){
+void pitchToaction(int I_pitch, int I_velocity){
   if(I_pitch == 83) action = 0; //home
-  if(I_pitch==45) action = 1; //strummm
 
   // mapping solenoids knocks 
   if(I_pitch==36) action = 14;
@@ -127,7 +133,7 @@ void switchesOn(int I_action, int I_velocity){
   default: 
     //pick all other notes as fret or knocks
     if(I_action >= 14 && I_action <= 19) digitalWrite(RELAYS[I_action-14], HIGH); 
-    if(I_action >= 20 && I_action <= 44) goStepper2(I_action);
+    if(I_action >= 20 && I_action <= 44) goStepper2(I_action, I_velocity);
     break;  
 
   case 0: 
@@ -136,9 +142,6 @@ void switchesOn(int I_action, int I_velocity){
     break; 
 
   case 1: 
-    stepper1.enableOutputs();
-    stepperMove = 1;
-    if(DEBUG) Serial<<"stepper1_action"<<endl;
     break;
 
   case 2:
@@ -188,17 +191,20 @@ void stepper2_Accel_change(int I_stpacl2){
   if(DEBUG) Serial<<"current accel 2: "<<stepper2_accl<<endl;
 }
 
-void goStepper2(int i_dest){
+void goStepper2(int i_dest, int I_velocity){
   //takes the various cntrols for the slider stepper2
   // and starts to moves the stepper
   stepper2.enableOutputs();
+  stepper2_Speed = map(I_velocity, 0 , 127, 100, 3000);
   stepper2.setMaxSpeed(stepper2_Speed);
-  stepper2.setAcceleration(stepper2_accl);
+  stepper2.setAcceleration(stepper2_Speed-1);
   //i refer here to two arrays discrbing the same memebers :/
   //i_dest = (sizeof(scalePos)/sizeof(int)) - 1;
   int tempDest = i_dest - 20;
   //Serial<<"idest/tempdest>"<<i_dest<<"/"<<tempDest<<endl;
   stepper2.moveTo(scalePos[tempDest]);
+    if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
+
 }
 
 void homeAll(){
@@ -271,13 +277,6 @@ void setup(){
   pinMode(limitPin1a, INPUT_PULLUP); //arm the pullup for limit pin
   pinMode(limitPin1b, INPUT_PULLUP); //arm the pullup for limit pin
 
-  pinMode(MS1_pin, OUTPUT);
-  digitalWrite(MS1_pin, LOW);
-  pinMode(MS2_pin, OUTPUT);
-  digitalWrite(MS2_pin, LOW);
-  pinMode(MS3_pin, OUTPUT);
-  digitalWrite(MS3_pin, LOW);
-
   /////// stepper 2 ////////
   stepper2.setPinsInverted(1,0,1); //dir, step, enable
   stepper2.setMaxSpeed(stepper2_Speed);
@@ -304,7 +303,7 @@ void loop(){
   midiA.read();
   stepper1_action(); 
   stepper2.run(); // slider stepper 02
-  if(stepper2.distanceToGo()==0) stepper2.disableOutputs(); 
+  //if(stepper2.distanceToGo()==0) stepper2.disableOutputs(); 
 }
 
 
