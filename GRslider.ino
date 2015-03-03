@@ -74,122 +74,32 @@ void stepper1_action(){
 
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
-  //stepper1 is here
-  if(pitch==45){
+\
+
+  if(pitch==45){ //stepper1 is here
     stepper1.enableOutputs();
     stepper1_Speed = map(velocity, 0, 127, 70, 450);
 
-    if(limit_A == 1){
-            stepper1.setSpeed(-stepper1_Speed);
-    }else{
-            stepper1.setSpeed(stepper1_Speed);
-    }
-    stepperMove = 1;
+      if(limit_A == 1){
+              stepper1.setSpeed(-stepper1_Speed);
+      }else{
+              stepper1.setSpeed(stepper1_Speed);
+      }
+      stepperMove = 1;
     }
 
-  pitchToaction(pitch, velocity);
+  if(pitch >= 36 && pitch <= 41) digitalWrite(RELAYS[pitch-36], HIGH); // mapping solenoids knocks 
+  if(pitch >= 47 && pitch <= 65)  goStepper2(pitch, velocity);  //mapping frets 
+  if(pitch == 83) homeAll(); //home
+
   if(DEBUG) Serial << "ON: pitch/action/val> " << pitch << " / "<< action << " / "<< velocity <<endl;
 
-  if(action!= 99) switchesOn(action, velocity);
 }
 
 void HandleNoteOff(byte channel, byte pitch, byte velocity){
-  pitchToaction(pitch, velocity);
-  if(action!= 99) switchsOff(action, velocity);
+  if(pitch >= 36 && pitch <= 41)  digitalWrite(RELAYS[pitch-36], LOW);
 }
 
-// map the midi key (pitch) to a serialize number 
-void pitchToaction(int I_pitch, int I_velocity){
-  if(I_pitch == 83) action = 0; //home
-
-  // mapping solenoids knocks 
-  if(I_pitch==36) action = 14;
-  if(I_pitch==37) action = 15;
-  if(I_pitch==38) action = 16;
-  if(I_pitch==39) action = 17;
-  if(I_pitch==40) action = 18;
-  if(I_pitch==41) action = 19;
-
-  //mapping frets , maping starts at 20
-  if(I_pitch >= 47 && I_pitch <= 65)    action = I_pitch - 27;  
-
-  //various velocity changes for fret an strum
-  if(I_pitch == 72) action = 3; //strum speed +
-  if(I_pitch == 74) action = 4; //strum speed -
-  if(I_pitch == 76) action = 5; //slider speed +
-  if(I_pitch == 77) action = 6; //slider speed -
-  if(I_pitch == 79) action = 7; //slider accel +
-  if(I_pitch == 81) action = 8; //slider accel -
-}
-
-void switchsOff(int I_action, int I_velocity){
-  //pick all other notes as knocks
-  if(I_action >= 14 && I_action <= 19) digitalWrite(RELAYS[I_action-14], LOW);
-  action = 99; //reset key
-}
-
-void switchesOn(int I_action, int I_velocity){
-  switch (I_action) {
-  default: 
-    //pick all other notes as fret or knocks
-    if(I_action >= 14 && I_action <= 19) digitalWrite(RELAYS[I_action-14], HIGH); 
-    if(I_action >= 20 && I_action <= 44) goStepper2(I_action, I_velocity);
-    break;  
-
-  case 0: 
-    homeAll();
-    if(DEBUG) Serial<<"homeAll"<<endl;
-    break; 
-
-  case 1: 
-    break;
-
-  case 2:
-
-    break; 
-
-  case 3: 
-    stepper1_Speed_change(5);
-    break; 
-
-  case 4: 
-    stepper1_Speed_change(-5);
-    break;
-
-  case 5: 
-    stepper2_Speed_change(50);
-    break; 
-
-  case 6: 
-    stepper2_Speed_change(-50);
-
-    break;   
-
-  case 7: 
-    stepper2_Accel_change(100);
-    break; 
-
-  case 8: 
-    stepper2_Accel_change(-100);
-    break; 
-  } 
-  action = 99; //reset key
-}
-
-void stepper1_Speed_change(int I_stpspd){
-  if(stepper1_Speed > 0) stepper1_Speed = stepper1_Speed + I_stpspd;
-  if(DEBUG) Serial<<"current speed 1: "<<stepper1_Speed<<endl;
-}
-
-void stepper2_Speed_change(int I_stpspd2){
-  if(stepper2_Speed > 0) stepper2_Speed = stepper2_Speed + I_stpspd2;
-  if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
-}
-
-void stepper2_Accel_change(int I_stpacl2){
-  if(stepper2_accl > 0) stepper2_accl = stepper2_accl + I_stpacl2;
-  if(DEBUG) Serial<<"current accel 2: "<<stepper2_accl<<endl;
-}
 
 void goStepper2(int i_dest, int I_velocity){
   //takes the various cntrols for the slider stepper2
@@ -204,7 +114,6 @@ void goStepper2(int i_dest, int I_velocity){
   //Serial<<"idest/tempdest>"<<i_dest<<"/"<<tempDest<<endl;
   stepper2.moveTo(scalePos[tempDest]);
     if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
-
 }
 
 void homeAll(){
