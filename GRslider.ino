@@ -81,7 +81,7 @@ void HandleNoteOn(byte channel, byte pitch, byte velocity) {
   if(pitch >= 47 && pitch <= 65)  goStepper2(pitch, velocity);  //mapping frets 
   if(pitch == 83) homeAll(); //home
 
-  if(DEBUG) Serial << "ON: pitch/action/val> " << pitch << " / "<< action << " / "<< velocity <<endl;
+  if(DEBUG) Serial << "ON: pitch/vel> " << pitch << " / "<< velocity <<endl;
 
 }
 
@@ -94,15 +94,15 @@ void goStepper2(int i_dest, int I_velocity){
   //takes the various cntrols for the slider stepper2
   // and starts to moves the stepper
   stepper2.enableOutputs();
-  stepper2_Speed = map(I_velocity, 0 , 127, 100, 3000);
+  //stepper2_Speed = map(I_velocity, 0 , 127, 300, 3000);
+  stepper2_Speed = 2000;
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setAcceleration(stepper2_Speed-1);
-  //i refer here to two arrays discrbing the same memebers :/
   //i_dest = (sizeof(scalePos)/sizeof(int)) - 1;
-  int tempDest = i_dest - 20;
+  int tempDest = i_dest - 47;
   //Serial<<"idest/tempdest>"<<i_dest<<"/"<<tempDest<<endl;
   stepper2.moveTo(scalePos[tempDest]);
-    if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
+  //  if(DEBUG) Serial<<"speed / dest "<<stepper2_Speed<<" / "<<tempDest<<endl;
 }
 
 void goStepper1(int I_velocity){
@@ -156,14 +156,14 @@ void homeStepper2(){
   stepper2.setCurrentPosition(0);
   stepper2.setMaxSpeed(1000);
   stepper2.setAcceleration(10000);
-  stepper2.moveTo(-4000);
+  stepper2.moveTo(4000); //minus for going left
   while(digitalRead(limitPin2a)){
     stepper2.run();
   }
 
   if(DEBUG)Serial.print("steps to home: "); //how many steps did we take to reach home
   if(DEBUG)Serial.println(stepper2.currentPosition());
-  stepper2.setCurrentPosition(0);
+  stepper2.setCurrentPosition(792); //was zero, faking with top 
   stepper2.disableOutputs();
 }
 
