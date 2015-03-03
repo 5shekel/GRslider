@@ -76,18 +76,7 @@ void stepper1_action(){
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
 \
 
-  if(pitch==45){ //stepper1 is here
-    stepper1.enableOutputs();
-    stepper1_Speed = map(velocity, 0, 127, 70, 450);
-
-      if(limit_A == 1){
-              stepper1.setSpeed(-stepper1_Speed);
-      }else{
-              stepper1.setSpeed(stepper1_Speed);
-      }
-      stepperMove = 1;
-    }
-
+  if(pitch==45) goStepper1(velocity);//stepper1 is here
   if(pitch >= 36 && pitch <= 41) digitalWrite(RELAYS[pitch-36], HIGH); // mapping solenoids knocks 
   if(pitch >= 47 && pitch <= 65)  goStepper2(pitch, velocity);  //mapping frets 
   if(pitch == 83) homeAll(); //home
@@ -114,6 +103,18 @@ void goStepper2(int i_dest, int I_velocity){
   //Serial<<"idest/tempdest>"<<i_dest<<"/"<<tempDest<<endl;
   stepper2.moveTo(scalePos[tempDest]);
     if(DEBUG) Serial<<"current speed 2: "<<stepper2_Speed<<endl;
+}
+
+void goStepper1(int I_velocity){
+    stepper1.enableOutputs();
+    stepper1_Speed = map(I_velocity, 0, 127, 70, 450);
+
+      if(limit_A == 1){
+              stepper1.setSpeed(-stepper1_Speed);
+      }else{
+              stepper1.setSpeed(stepper1_Speed);
+      }
+      stepperMove = 1;
 }
 
 void homeAll(){
