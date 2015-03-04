@@ -78,9 +78,9 @@ void HandleNoteOn(byte channel, byte pitch, byte velocity) {
 
   if(pitch==45) goStepper1(velocity);//stepper1 is here
   if(pitch >= 36 && pitch <= 41) digitalWrite(RELAYS[pitch-36], HIGH); // mapping solenoids knocks 
-  if(pitch >= 47 && pitch <= 65)  goStepper2(pitch, velocity);  //mapping frets 
-  if(pitch == 83) homeAll(); //home
-
+  if(pitch >= 47 && pitch <= 64)  goStepper2(pitch, velocity);  //mapping frets 
+  if(pitch == 65) homeStepper2(); //hack to use the limit as a zeroing mechanism
+  //if(pitch == 83) homeAll(); //home
   if(DEBUG) Serial << "ON: pitch/vel> " << pitch << " / "<< velocity <<endl;
 
 }
@@ -98,11 +98,8 @@ void goStepper2(int i_dest, int I_velocity){
   stepper2_Speed = 2000;
   stepper2.setMaxSpeed(stepper2_Speed);
   stepper2.setAcceleration(stepper2_Speed-1);
-  //i_dest = (sizeof(scalePos)/sizeof(int)) - 1;
   int tempDest = i_dest - 47;
-  //Serial<<"idest/tempdest>"<<i_dest<<"/"<<tempDest<<endl;
   stepper2.moveTo(scalePos[tempDest]);
-  //  if(DEBUG) Serial<<"speed / dest "<<stepper2_Speed<<" / "<<tempDest<<endl;
 }
 
 void goStepper1(int I_velocity){
@@ -118,8 +115,6 @@ void goStepper1(int I_velocity){
 }
 
 void homeAll(){
-  stepper1.enableOutputs();
-  stepper2.enableOutputs();
   //run steppers until they hits the limit switch   
   homeStepper1();  
   homeStepper2();  
@@ -150,7 +145,7 @@ void homeStepper1(){
 void homeStepper2(){
   //run stepper until it hits the limit switch
   //the while is BLOCKING so we cant use it in main loop
-  if(DEBUG)Serial.println("home_02");
+  //if(DEBUG)Serial.println("home_02");
 
   stepper2.enableOutputs();
   stepper2.setCurrentPosition(0);
