@@ -40,9 +40,9 @@ int stepper2_Speed = 5000;
 int stepper2_accl = 4500;
 
 #define limitPin2a 3
-#define step2_STEP 10
-#define step2_DIR 11
-#define step2_ENABLE 12
+#define step2_DIR 29
+#define step2_STEP 31
+#define step2_ENABLE 33
 AccelStepper stepper2(1, step2_STEP, step2_DIR); //step / dir
 
 int scalePos[19] = {
@@ -74,13 +74,12 @@ void stepper1_action(){
 
 
 void HandleNoteOn(byte channel, byte pitch, byte velocity) {
-\
 
   if(pitch==45) goStepper1(velocity);//stepper1 is here
   if(pitch >= 36 && pitch <= 41) digitalWrite(RELAYS[pitch-36], HIGH); // mapping solenoids knocks 
   if(pitch >= 47 && pitch <= 64)  goStepper2(pitch, velocity);  //mapping frets 
   if(pitch == 65) homeStepper2(); //hack to use the limit as a zeroing mechanism
-  //if(pitch == 83) homeAll(); //home
+  if(pitch == 83) homeAll(); //home
   if(DEBUG) Serial << "ON: pitch/vel> " << pitch << " / "<< velocity <<endl;
 
 }
