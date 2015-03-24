@@ -1,6 +1,6 @@
 // GRslider for arduino mega 2560
 
-#define DEBUG true
+#define DEBUG false
 
 ///// MIDI ///////
 #include "MIDI.h"
@@ -122,14 +122,11 @@ void homeAll(){
 void sleepAll(){
   stepper1.disableOutputs();
   stepper2.disableOutputs();
-  Serial.println("steppers sleep");
 }
 
 void homeStepper1(){
   //run stepper until it hits the limit switch
   //the while is BLOCKING so we cant use it in main loop
-  if(DEBUG)Serial.println("home_01");
-
   stepper1.enableOutputs();
   stepper1.setSpeed(400); //override stepper1 speed, it might be slow
   while(digitalRead(limitPin1b))
@@ -144,20 +141,14 @@ void homeStepper1(){
 void homeStepper2(){
   //run stepper until it hits the limit switch
   //the while is BLOCKING so we cant use it in main loop
-  //if(DEBUG)Serial.println("home_02");
-
   stepper2.enableOutputs();
-  stepper2.setCurrentPosition(0);
   stepper2.setMaxSpeed(1000);
   stepper2.setAcceleration(10000);
-  stepper2.moveTo(4000); //minus for going left
+  stepper2.moveTo(-4000); //minus for going left
   while(digitalRead(limitPin2a)){
     stepper2.run();
   }
-
-  if(DEBUG)Serial.print("steps to home: "); //how many steps did we take to reach home
-  if(DEBUG)Serial.println(stepper2.currentPosition());
-  stepper2.setCurrentPosition(792); //was zero, faking with top 
+  stepper2.setCurrentPosition(0);
   stepper2.disableOutputs();
 }
 
