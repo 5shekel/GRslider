@@ -1,6 +1,6 @@
 // GRslider for arduino mega 2560
 
-#define DEBUG false
+#define DEBUG true
 
 ///// MIDI ///////
 #include "MIDI.h"
@@ -25,7 +25,7 @@ int RELAYS[6] = {
 //////// #1 //////////////
 int stepper1_Speed = 400;
 
-#define limitPin1a 5
+#define limitPin1a 3
 #define limitPin1b 4
 #define step1_STEP 7
 #define step1_DIR 8
@@ -39,7 +39,7 @@ AccelStepper stepper1(1, step1_STEP, step1_DIR); //step / dir
 int stepper2_Speed = 5000;
 int stepper2_accl = 4500;
 
-#define limitPin2a 3
+#define limitPin2a 5
 #define step2_DIR 29
 #define step2_STEP 31
 #define step2_ENABLE 33
@@ -48,7 +48,6 @@ AccelStepper stepper2(1, step2_STEP, step2_DIR); //step / dir
 int scalePos[19] = {
   0, 44, 88, 132, 176, 220, 264, 308, 352, 396, 
   440, 484, 528, 572, 616, 660, 704, 748, 792};
-///////////////////////////////
 
 int action; //see eventclass for more
 
@@ -61,12 +60,14 @@ void stepper1_action(){
       limit_A = 2;
       stepperMove = false;
       stepper1.disableOutputs();
+      Serial<<"limitA=1"<<endl;
     }
     else if(!digitalRead(limitPin1b) && limit_A==2)
     {
       limit_A = 1;
       stepperMove = false;
       stepper1.disableOutputs();
+      Serial<<"limitB=2"<<endl;
     }
     stepper1.runSpeed();
   }
@@ -80,7 +81,7 @@ void HandleNoteOn(byte channel, byte pitch, byte velocity) {
   if(pitch >= 47 && pitch <= 64)  goStepper2(pitch, velocity);  //mapping frets 
   if(pitch == 65) homeStepper2(); //hack to use the limit as a zeroing mechanism
   if(pitch == 83) homeAll(); //home
-  if(DEBUG) Serial << "ON: pitch/vel> " << pitch << " / "<< velocity <<endl;
+  //if(DEBUG) Serial << "ON: pitch/vel> " << pitch << " / "<< velocity <<endl;
 
 }
 
@@ -128,13 +129,16 @@ void homeStepper1(){
   //run stepper until it hits the limit switch
   //the while is BLOCKING so we cant use it in main loop
   stepper1.enableOutputs();
-  stepper1.setSpeed(400); //override stepper1 speed, it might be slow
-  while(digitalRead(limitPin1b))
+  stepper1.setSpeed(-400); //override stepper1 speed, it might be slow
+  while(digitalRead(limitPin1a)){
     stepper1.runSpeed();
+    
+    if(DEBUG) Serial<<"limitPin1a= "<<digitalRead(limitPin1a)<< 
+    " limitPin1b= "<<digitalRead(limitPin1b)<<endl;
+  }
 
   // prime stepper for next action
   limit_A = 1;
-  stepper1.setSpeed(-400);
   stepper1.disableOutputs();
 }
 
@@ -182,7 +186,7 @@ void setup(){
 
   ////////////////////////////
   if(DEBUG)    Serial.begin(115200);
-
+  if(DEBUG)    Serial<<"restart:"<<endl;
 
   //run steppers until they hits the limit switch   
   homeStepper1();
@@ -195,6 +199,7 @@ void setup(){
 }
 
 void loop(){
+
   midiA.read();
   stepper1_action(); 
   stepper2.run(); // slider stepper 02
